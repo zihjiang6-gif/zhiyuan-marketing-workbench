@@ -709,7 +709,7 @@ function renderKBHealth() {
             </div>
             <div style="text-align:right">
                 <div style="font-size:.9rem;font-weight:700;color:${kb.avgConfidence>=0.85?'var(--accent2)':'var(--warn)'}">${(kb.avgConfidence*100).toFixed(0)}%</div>
-                <div style="font-size:.5rem;color:var(--text3)">平均置信度</div>
+                <div style="font-size:.5rem;color:var(--text3)">平均可信度</div>
             </div>
             <div style="text-align:right">
                 <div style="font-size:.9rem;font-weight:700;color:#60A5FA">${kb.avgWeight.toFixed(1)}</div>
@@ -733,7 +733,7 @@ function renderKBHealth() {
     html += `
         <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border);font-size:.52rem;color:var(--text3);line-height:1.6">
             <div>最常用记录：<span style="color:var(--accent)">${kb.mostUsed}</span></div>
-            <div>低置信度记录：<span style="color:${kb.lowConfidenceCount>0?'var(--warn)':'var(--accent2)'}">${kb.lowConfidenceCount} 条</span></div>
+            <div>低可信度记录：<span style="color:${kb.lowConfidenceCount>0?'var(--warn)':'var(--accent2)'}">${kb.lowConfidenceCount} 条</span></div>
             <div>最后更新：<span style="color:var(--text4)">${kb.lastUpdated}</span></div>
         </div>
     `;

@@ -337,21 +337,21 @@
             </div>
         </div>
 
-        <!-- 检索证据摘要（生成内容后显示） -->
+        <!-- 生成依据摘要（生成内容后显示） -->
         <div class="card" id="cardEvidenceSummary" style="display:none">
             <div class="card-header">
-                <span class="card-title">检索证据</span>
+                <span class="card-title">生成依据</span>
                 <span class="card-subtitle" id="evSummaryShort">—</span>
             </div>
             <div class="card-body" style="padding:12px 16px">
                 <div style="font-size:.72rem;font-weight:700;color:#1E293B;margin-bottom:6px" id="evSummaryMain">本次使用知识库记录：— 条</div>
                 <div class="summary-strip" id="evSummaryStrip"></div>
                 <div class="collapse-toggle" onclick="toggleEvidenceDetail()" id="evToggle">
-                    <span class="arrow" id="evArrow">&#9654;</span> 查看检索证据
+                    <span class="arrow" id="evArrow">&#9654;</span> 查看生成依据
                 </div>
                 <div class="collapse-content" id="evDetailContent">
                     <div style="max-height:400px;overflow-y:auto;margin-top:8px">
-                        <table class="ev-table" id="evTable"><thead><tr><th>排序</th><th>记录编号</th><th>分类</th><th>键名</th><th>内容</th><th>置信度</th><th>分数</th></tr></thead><tbody></tbody></table>
+                        <table class="ev-table" id="evTable"><thead><tr><th>排序</th><th>记录编号</th><th>分类</th><th>字段</th><th>内容</th><th>可信度</th><th>相关度分数</th></tr></thead><tbody></tbody></table>
                     </div>
                 </div>
             </div>
@@ -391,7 +391,7 @@
                             <div class="plat-tags" id="xhsTags"></div>
                         </div>
                         <div class="plat-ft">
-                            <span id="xhsSources">引用来源：—</span>
+                            <span id="xhsSources">本次引用来源：—</span>
                             <span style="color:#FF6B81;font-weight:600" id="xhsScore">—</span>
                         </div>
                     </div>
@@ -412,7 +412,7 @@
                             <div class="plat-tags" id="wxTags"></div>
                         </div>
                         <div class="plat-ft">
-                            <span id="wxSources">引用来源：—</span>
+                            <span id="wxSources">本次引用来源：—</span>
                             <span style="color:#07C160;font-weight:600" id="wxScore">—</span>
                         </div>
                     </div>
@@ -432,7 +432,7 @@
                             <div class="plat-tags" id="liTags"></div>
                         </div>
                         <div class="plat-ft">
-                            <span id="liSources">引用来源：—</span>
+                            <span id="liSources">本次引用来源：—</span>
                             <span style="color:#0A66C2;font-weight:600" id="liScore">—</span>
                         </div>
                     </div>
@@ -520,7 +520,7 @@
                         <div id="ecDetail">导出条件：内容审核通过后可导出</div>
                     </div>
                 </div>
-                <div style="font-size:.58rem;color:var(--text3);margin-bottom:10px">包含内容：活动简报、检索证据、提示词构建、内容质检、三平台内容、版本记录</div>
+                <div style="font-size:.58rem;color:var(--text3);margin-bottom:10px">包含内容：活动简报、生成依据、提示词构建、内容质检、三平台内容、版本记录</div>
                 <div style="display:flex;gap:8px">
                     <button class="btn btn-primary btn-sm" onclick="exportAsJSON()" id="btnExportJSON" disabled>导出 JSON</button>
                     <button class="btn btn-primary btn-sm" onclick="exportAsMarkdown()" id="btnExportMD" disabled>导出 Markdown</button>
@@ -538,14 +538,14 @@
             <div class="card-body">
                 <div class="stat-grid" id="kbOverview"></div>
                 <div style="margin-top:14px">
-                    <input class="inp" id="kbSearch" placeholder="按键名 / 内容 / 来源搜索..." oninput="renderKBTable()" style="margin-bottom:10px">
+                    <input class="inp" id="kbSearch" placeholder="按字段 / 内容 / 来源搜索..." oninput="renderKBTable()" style="margin-bottom:10px">
                     <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;align-items:center" id="kbCatFilters"></div>
                     <div style="display:flex;gap:6px;margin-bottom:10px">
-                        <select class="inp" id="kbConfFilter" onchange="renderKBTable()" style="width:auto;font-size:.55rem"><option value="all">全部置信度</option><option value="high">高 (0.9+)</option><option value="mid">中 (0.7-0.9)</option><option value="low">低 (&lt;0.7)</option></select>
-                        <select class="inp" id="kbSortBy" onchange="renderKBTable()" style="width:auto;font-size:.55rem"><option value="weight">按权重排序</option><option value="used">按使用次数排序</option><option value="confidence">按置信度排序</option><option value="id">按编号排序</option></select>
+                        <select class="inp" id="kbConfFilter" onchange="renderKBTable()" style="width:auto;font-size:.55rem"><option value="all">全部可信度</option><option value="high">高 (0.9+)</option><option value="mid">中 (0.7-0.9)</option><option value="low">低 (&lt;0.7)</option></select>
+                        <select class="inp" id="kbSortBy" onchange="renderKBTable()" style="width:auto;font-size:.55rem"><option value="weight">按权重排序</option><option value="used">按使用次数排序</option><option value="confidence">按可信度排序</option><option value="id">按编号排序</option></select>
                     </div>
                     <div style="max-height:400px;overflow-y:auto">
-                        <table class="ev-table" id="kbTable"><thead><tr><th>编号</th><th>分类</th><th>键名</th><th>内容</th><th>置信度</th><th>权重</th><th>使用次数</th></tr></thead><tbody></tbody></table>
+                        <table class="ev-table" id="kbTable"><thead><tr><th>编号</th><th>分类</th><th>字段</th><th>内容</th><th>可信度</th><th>权重</th><th>使用次数</th></tr></thead><tbody></tbody></table>
                     </div>
                 </div>
             </div>
@@ -634,7 +634,7 @@
         <div class="rp-row"><span class="rp-label">当前版本</span><span class="rp-value" id="rpVersion">v1</span></div>
     </div>
     <div class="rp-section">
-        <div class="rp-title">知识库引用</div>
+        <div class="rp-title">本次引用来源</div>
         <div id="rpSources" style="font-size:.55rem;color:var(--text3);line-height:1.8">尚未生成</div>
     </div>
     <div class="rp-section">
@@ -948,14 +948,14 @@ function detectIssues(ragResults,contentText){
             const vals=new Set(records.map(r=>r.value));
             if(vals.size>1){
                 const best=records.sort((a,b)=>(b.weight||5)*(b.confidence||0.85)-(a.weight||5)*(a.confidence||0.85))[0];
-                warnings.push({issue:'出现冲突值',severity:'中',detectedIn:'检索证据',systemAction:'按最高权重×置信度自动选择',userSuggestion:'请复核所选值',status:'已处理',statusClass:'gr-status-resolved'});
+                warnings.push({issue:'出现冲突值',severity:'中',detectedIn:'生成依据',systemAction:'按最高权重×可信度自动选择',userSuggestion:'请复核所选值',status:'已处理',statusClass:'gr-status-resolved'});
             }
         }
     });
     const required=[{cat:'product',key:'name'},{cat:'product',key:'color'},{cat:'audience',key:'demographic'},{cat:'brand',key:'tone'}];
     required.forEach(req=>{
         const found=ragResults.find(r=>r.category===req.cat&&r.key===req.key);
-        if(!found)warnings.push({issue:`缺少 ${req.cat}.${req.key} 字段`,severity:'低',detectedIn:'检索证据',systemAction:'已使用简报中的默认值',userSuggestion:'请将该记录添加至知识库',status:'已规避',statusClass:'gr-status-mitigated'});
+        if(!found)warnings.push({issue:`缺少 ${req.cat}.${req.key} 字段`,severity:'低',detectedIn:'生成依据',systemAction:'已使用简报中的默认值',userSuggestion:'请将该记录添加至知识库',status:'已规避',statusClass:'gr-status-mitigated'});
     });
 
     // 内容层面的高风险检测
@@ -1161,8 +1161,8 @@ function renderEvidenceSummary(ragResults){
             <td><span class="ev-cat" style="background:${cfg.color}15;color:${cfg.color}">${catName}</span></td>
             <td style="color:var(--text2)">${key}</td>
             <td style="color:var(--text)">${value}</td>
-            <td style="font-family:monospace;color:${r.retrieval_score>20?'#4ADE80':r.retrieval_score>10?'#FBBF24':'#71717A'}">${score}</td>
             <td style="color:var(--text3)">${confidence}</td>
+            <td style="font-family:monospace;color:${r.retrieval_score>20?'#4ADE80':r.retrieval_score>10?'#FBBF24':'#71717A'}">${score}</td>
         </tr>`;
     }).join('');
 }
@@ -1179,7 +1179,7 @@ function renderOutputs(xhs,wx,li,sdxl,cn,neg,product){
     document.getElementById('xhsTitle').textContent=xhs.title;
     document.getElementById('xhsBody').textContent=xhs.body;
     document.getElementById('xhsTags').innerHTML=(xhs.hashtags||[]).map(t=>`<span>#${t.replace('#','')}</span>`).join('');
-    document.getElementById('xhsSources').textContent='来源：'+(xhs.sources||[]).slice(0,3).join(', ');
+    document.getElementById('xhsSources').textContent='本次引用来源：'+(xhs.sources||[]).slice(0,3).join(', ');
     document.getElementById('xhsScore').textContent='种草';
     document.getElementById('xhsImgWrap').style.display='';
 
@@ -1188,7 +1188,7 @@ function renderOutputs(xhs,wx,li,sdxl,cn,neg,product){
     document.getElementById('wxLead').textContent=wx.lead||wx.body.substring(0,80)+'...';
     document.getElementById('wxBody').textContent=wx.body;
     document.getElementById('wxTags').innerHTML=(wx.hashtags||[]).map(t=>`<span>#${t.replace('#','')}</span>`).join('');
-    document.getElementById('wxSources').textContent='来源：'+(wx.sources||[]).slice(0,3).join(', ');
+    document.getElementById('wxSources').textContent='本次引用来源：'+(wx.sources||[]).slice(0,3).join(', ');
     document.getElementById('wxScore').textContent='深度';
     document.getElementById('wxImgWrap').style.display='';
 
@@ -1196,7 +1196,7 @@ function renderOutputs(xhs,wx,li,sdxl,cn,neg,product){
     document.getElementById('liTitle').textContent=li.title;
     document.getElementById('liBody').textContent=li.body;
     document.getElementById('liTags').innerHTML=(li.hashtags||[]).map(t=>`<span>#${t.replace('#','')}</span>`).join('');
-    document.getElementById('liSources').textContent='来源：'+(li.sources||[]).slice(0,3).join(', ');
+    document.getElementById('liSources').textContent='本次引用来源：'+(li.sources||[]).slice(0,3).join(', ');
     document.getElementById('liScore').textContent='专业';
     document.getElementById('liImgWrap').style.display='';
 
@@ -1591,7 +1591,7 @@ function regenerateXHS(){
     document.getElementById('xhsTitle').textContent=xhs.title;
     document.getElementById('xhsBody').textContent=xhs.body;
     document.getElementById('xhsTags').innerHTML=(xhs.hashtags||[]).map(t=>`<span>#${t.replace('#','')}</span>`).join('');
-    document.getElementById('xhsSources').textContent='来源：'+(xhs.sources||[]).slice(0,3).join(', ');
+    document.getElementById('xhsSources').textContent='本次引用来源：'+(xhs.sources||[]).slice(0,3).join(', ');
     campaignState.reviewStatus='generated';
     campaignState.lastAction='重新生成小红书 v'+campaignState.version;
     addTimeline('小红书重新生成 v'+campaignState.version);
@@ -1616,7 +1616,7 @@ function regenerateWeChat(){
     document.getElementById('wxLead').textContent=wx.lead||wx.body.substring(0,80)+'...';
     document.getElementById('wxBody').textContent=wx.body;
     document.getElementById('wxTags').innerHTML=(wx.hashtags||[]).map(t=>`<span>#${t.replace('#','')}</span>`).join('');
-    document.getElementById('wxSources').textContent='来源：'+(wx.sources||[]).slice(0,3).join(', ');
+    document.getElementById('wxSources').textContent='本次引用来源：'+(wx.sources||[]).slice(0,3).join(', ');
     campaignState.reviewStatus='generated';
     campaignState.lastAction='重新生成微信 v'+campaignState.version;
     addTimeline('微信重新生成 v'+campaignState.version);
@@ -1640,7 +1640,7 @@ function regenerateLinkedIn(){
     document.getElementById('liTitle').textContent=li.title;
     document.getElementById('liBody').textContent=li.body;
     document.getElementById('liTags').innerHTML=(li.hashtags||[]).map(t=>`<span>#${t.replace('#','')}</span>`).join('');
-    document.getElementById('liSources').textContent='来源：'+(li.sources||[]).slice(0,3).join(', ');
+    document.getElementById('liSources').textContent='本次引用来源：'+(li.sources||[]).slice(0,3).join(', ');
     campaignState.reviewStatus='generated';
     campaignState.lastAction='重新生成 LinkedIn v'+campaignState.version;
     addTimeline('LinkedIn 重新生成 v'+campaignState.version);
@@ -1933,7 +1933,7 @@ function updateRightPanel(){
     document.getElementById('rpStatus').textContent=statusMap[campaignState.reviewStatus]||'草稿';
     document.getElementById('rpVersion').textContent='v'+campaignState.version;
 
-    // 引用来源
+    // 本次引用来源
     if(campaignState.ragResults.length>0){
         const cats={};campaignState.ragResults.forEach(r=>{if(!cats[r.category])cats[r.category]=0;cats[r.category]++;});
         document.getElementById('rpSources').innerHTML=Object.entries(cats).map(([cat,count])=>{

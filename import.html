@@ -196,7 +196,7 @@ P01,product,name,Joyful Pink Scuba Hoodie,产品简报,0.95,10,产品名|核心"
                 <input class="inp" id="manVal" placeholder="值 (如 Joyful Pink Scuba Hoodie)" style="margin-bottom:8px">
                 <div class="form-grid-3">
                     <input class="inp" id="manSource" placeholder="来源 (如 产品简报)" value="手动录入">
-                    <input class="inp" id="manConf" placeholder="置信度 0-1 (如 0.9)" type="number" min="0" max="1" step="0.05" value="0.85">
+                    <input class="inp" id="manConf" placeholder="可信度 0-1 (如 0.9)" type="number" min="0" max="1" step="0.05" value="0.85">
                     <input class="inp" id="manTags" placeholder="标签 (逗号分隔)">
                 </div>
                 <button class="btn btn-green" onclick="addManualRecord()">+ 添加到待导入列表</button>
@@ -214,7 +214,7 @@ P01,product,name,Joyful Pink Scuba Hoodie,产品简报,0.95,10,产品名|核心"
         <div class="card-header"><span class="card-title">模式参考</span></div>
         <div class="card-body" style="font-size:.6rem;color:var(--text3);line-height:1.7">
             <div><b style="color:var(--text)">必填字段:</b> <code style="color:var(--accent)">id</code>, <code style="color:var(--accent)">category</code>, <code style="color:var(--accent)">key</code>, <code style="color:var(--accent)">value</code></div>
-            <div><b style="color:var(--text)">推荐字段:</b> <code style="color:var(--text2)">source</code>, <code style="color:var(--text2)">confidence</code> (0-1), <code style="color:var(--text2)">weight</code> (1-10), <code style="color:var(--text2)">last_updated</code></div>
+            <div><b style="color:var(--text)">推荐字段:</b> <code style="color:var(--text2)">source</code>, <code style="color:var(--text2)">confidence</code>（可信度 0-1）, <code style="color:var(--text2)">weight</code> (1-10), <code style="color:var(--text2)">last_updated</code></div>
             <div><b style="color:var(--text)">可选字段:</b> <code style="color:var(--text4)">tags</code>, <code style="color:var(--text4)">used_count</code></div>
             <div style="margin-top:6px;padding:8px 10px;background:var(--surface2);border-radius:var(--radius-sm);font-family:monospace;font-size:.55rem">
                 分类: product | fabric | audience | brand | market | platform | history
