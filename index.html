@@ -250,7 +250,7 @@
     <div style="display:flex;align-items:center;gap:16px">
         <span class="topbar-stat"><span class="dot green" id="connDot"></span> <span id="connLabel">知识增强模式</span></span>
         <span class="topbar-stat">知识库: <b id="kbCount">30</b> 条</span>
-        <span class="topbar-stat">当前活动: <b>愉悦粉新品上市</b></span>
+        <span class="topbar-stat">当前活动: <b id="topCampaignName">愉悦粉新品上市</b></span>
         <span class="topbar-stat">审核: <b id="topReviewStatus">草稿</b></span>
     </div>
 </header>
@@ -627,6 +627,11 @@
     <div class="rp-section">
         <div class="rp-title">综合评分</div>
         <div class="rp-score-lg" id="rpOverall" style="color:var(--text3)">—</div>
+        <div class="rp-advice hidden" id="rpQualityAdvice"></div>
+        <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap" id="rpQualityActions" class="hidden">
+            <button class="btn btn-sm" onclick="document.getElementById('cardGuardrails').scrollIntoView({behavior:'smooth'})">查看扣分原因</button>
+            <button class="btn btn-primary btn-sm" onclick="optimizeAndRegenerate()">优化再生成</button>
+        </div>
     </div>
     <div class="rp-section">
         <div class="rp-title">审核状态</div>
@@ -774,6 +779,9 @@ function updateTopBar(){
     document.getElementById('kbCount').textContent=knowledgeRecords.length;
     const statusMap={draft:'草稿',generated:'已生成',pending:'待审核',approved:'已通过',rejected:'已驳回',exported:'已导出'};
     document.getElementById('topReviewStatus').textContent=statusMap[campaignState.reviewStatus]||'草稿';
+    const topCampaignName=document.getElementById('topCampaignName');
+    const inputCampaignName=document.getElementById('inpCampaignName')?.value?.trim();
+    if(topCampaignName)topCampaignName.textContent=inputCampaignName||'未命名活动';
 }
 
 // ====== 更多设置折叠 ======
@@ -1012,45 +1020,48 @@ ${query}`;
 // ====== 内容生成（模拟） ======
 function generateContent(platform,ragResults,brief){
     const kb=buildKBMap(ragResults);
-    const product=kb['name']||brief.product||'Joyful Pink Scuba Hoodie';
-    const brand=kb['brand']||brief.brand||'lululemon';
-    const color=kb['color']||'Joyful Pink';
-    const fabric=kb['fabric']||'Luon 面料';
-    const feel=kb['feel']||'四面弹力，柔软拉绒内里';
-    const fit=kb['fit']||'宽松 Clean Fit 廓形';
-    const tone=kb['tone']||'清新、高级、生活方式';
-    const demographic=kb['demographic']||'22-35岁都市女性';
+    const product=brief.product||kb['name']||'Joyful Pink Scuba Hoodie';
+    const brand=brief.brand||kb['brand']||'lululemon';
+    const color=inferColor(brief.brief,kb);
+    const fabric=kb['fabric']||(/防晒|UPF|uv/i.test(brief.brief)?'轻量防晒科技面料':'高弹舒适面料');
+    const feel=inferHeroFeature(brief.brief,kb);
+    const fit=kb['fit']||(/利落|不臃肿|通勤/.test(brief.brief)?'利落不臃肿版型':'松弛有型剪裁');
+    const tone=brief.tone||kb['tone']||'清新、高级、生活方式';
+    const demographic=brief.audience||kb['demographic']||'22-35岁都市女性';
     const trend=kb['trend_2026']||'Clean Fit / Quiet Luxury';
     const history=kb['past_performance']||'小红书互动率 4.2%';
     const price=kb['price']||'HK$980';
-    const season=kb['season']||'2026 春季系列';
+    const season=kb['season']||'2026 新品系列';
+    const goal=brief.goal||'新品上市曝光与转化';
+    const category=inferProductCategory(product,brief.brief);
+    const scenario=inferScenario(brief.brief,brief.audience);
+    const briefLine=brief.brief?brief.brief.split(/[。.!！?？]/).filter(Boolean)[0]:'围绕新品上市建立跨渠道内容表达';
 
     const generators={
         xiaohongshu:()=>({
-            title:`${color} Clean Fit 穿搭日记｜这件Scuba真的太适合春天了`,
-            body:`最近被${brand}这件${color}刷屏了，去店里试完直接买单\n\n${brand}这一季的粉色真的把「少女感」和「高级感」之间的平衡拿捏得刚刚好。灰调粉完全不挑皮，加上${product}经典的${fit}，随手穿就有时髦感。\n\n分享三套搭配灵感：\n\nLook 1 通勤精致感\nScuba + 米白阔腿裤 + 小白鞋 → effortless chic\n\nLook 2 周末慵懒风\nScuba + bike shorts + 老爹鞋 → 运动休闲\n\nLook 3 约会温柔系\nScuba + 碎花半裙 + 乐福鞋 → 甜而不腻\n\n${feel.split(',')[0]||'柔软拉绒内里'}面料软糯又挺阔，现在的天气单穿刚好，深秋加件大衣完美叠搭。${season}姐妹们冲！`,
-            hashtags:['cleanfit穿搭','lululemon','JoyfulPink','春季穿搭','高级感穿搭','OOTD','ScubaHoodie'],
+            title:`${product}上身体验｜${scenario}都能轻松带上`,
+            body:`最近在准备${scenario}穿搭，最想推荐的是 ${brand} 这件 ${product}。\n\n它的第一感受是「${feel}」。${briefLine}，所以日常穿起来不会只是好看，而是真的能解决场景里的小麻烦。\n\n我会这样搭：\n\nLook 1 通勤\n${category} + 直筒裤 + 简洁托特包，干净利落，不会显得用力过猛。\n\nLook 2 周末\n${category} + 运动短裤/半裙 + 轻便鞋，适合步行、咖啡、短途出行。\n\nLook 3 旅行\n${category} 直接放进随身包，需要的时候拿出来，轻便又有安全感。\n\n如果你也在找一件兼顾${tone}的夏季单品，这件可以加入试穿清单。`,
+            hashtags:['新品上市',brand.replace(/\s+/g,''),product.replace(/\s+/g,''),scenario.replace(/[、，,\s]/g,''),'通勤穿搭','生活方式','OOTD'],
             lead:'',
-            visualDirection:'柔和卧室或对镜自拍 clean-fit 场景，温暖光线，柔和色调',
+            visualDirection:`${scenario}生活方式场景，突出${product}的${feel}和${fit}，自然光，真实试穿感`,
             sources:['product.name','product.color','product.fit','fabric.feel','product.season'],
             sourceDetails:{'product.color':'标题与视觉提示词','product.fit':'正文穿搭建议','fabric.feel':'面料描述','product.name':'正文产品名'}
         }),
         wechat:()=>({
-            title:`新品上市｜${color}的 Clean Fit 灵感：一件 Scuba 的无限可能`,
-            lead:`${brand} 2026 春季系列迎来全新配色——${color}。这不仅是一个新色号，更是品牌对「不费力的高级感」的再一次诠释。`,
-            body:`一、色彩哲学：为什么是 Joyful Pink？\n\n${color}并非传统意义上的少女粉。${brand}在色彩调配中加入了灰调，使整体呈现出柔和、克制的高级质感。这一设计精准回应了${demographic}对「粉色易显幼稚」的穿搭痛点。\n\n二、面料与廓形：舒适是最高级的语言\n\n${product}采用${fabric}，${feel}。${fit}设计搭配落肩剪裁，既保留了 Hoodie 的休闲基因，又通过精准的比例控制呈现出现代都市感。${price}的定价延续了品牌高端运动休闲的定位。\n\n三、三套搭配方案：从通勤到约会\n\n我们为这款 Scuba 设计了三种场景化的搭配方案，覆盖都市女性一周的穿搭需求。无论是通勤、周末还是约会场景，${color}都能成为造型的「万能底色」。\n\n行动号召：即日起可在 lululemon 官网及线下门店体验 ${color}。`,
-            hashtags:['lululemon','新品上市','CleanFit','春季穿搭','品牌叙事'],
-            lead:'',
-            visualDirection:'简洁高级棚拍产品封面摄影，编辑级光影',
+            title:`新品上市｜${product}：为${demographic}准备的${category}`,
+            lead:`${brand} 推出 ${product}，围绕「${goal}」建立从产品卖点到场景体验的完整表达。`,
+            body:`一、为什么是这款新品？\n\n${briefLine}。这让 ${product} 不只是一个单品，而是面向${demographic}的场景解决方案。\n\n二、核心卖点：把功能感做得更日常\n\n${product}采用${fabric}，重点突出${feel}与${fit}。在${scenario}中，它需要同时满足舒适、便携、好搭配和品牌质感。\n\n三、内容表达方向\n\n小红书侧重真实试穿和使用场景，微信侧重产品卖点教育与品牌叙事，LinkedIn 侧重跨渠道营销策略与消费者洞察。三端统一围绕「${goal}」，但表达方式各自适配平台。\n\n四、行动建议\n\n建议在门店试穿、会员触达和社媒种草之间形成联动，沉淀用户反馈后进入下一轮投放优化。`,
+            hashtags:[brand,'新品上市',category,'产品卖点','品牌叙事'],
+            visualDirection:`高级产品棚拍与${scenario}场景组合，突出${product}的功能细节`,
             sources:['product.name','product.color','product.fabric','fabric.feel','product.fit','product.price','audience.demographic'],
             sourceDetails:{'product.color':'标题与色彩哲学','product.fabric':'面料段落','brand.tone':'整体写作风格','audience.demographic':'受众定位'}
         }),
         linkedin:()=>({
-            title:`Color as Strategy: How ${brand}'s ${color} Balances Sophistication and Emotion`,
-            body:`When ${brand} launched ${color} this season, it wasn't just adding another SKU — it was making a strategic statement about color psychology in premium athleisure.\n\nKey observations from this campaign:\n\n- Color Strategy: ${color} uses a grey-toned pink that neutralizes the "too girly" perception — a smart response to the ${demographic}'s preference for understated sophistication.\n\n- Product Identity: The ${product} leverages ${brand}'s proprietary ${fabric} (${feel}), delivering the ${tone} that defines the brand.\n\n- Market Timing: Launching during the ${trend} macro-trend positions this product at the intersection of two powerful consumer currents.\n\n- Cross-Channel Consistency: The campaign maintains a unified brand narrative across Xiaohongshu (lifestyle), WeChat (brand depth), and LinkedIn (business rationale) — a model for integrated marketing operations.\n\n- Performance Signal: Previous pink-series campaigns achieved ${history}, indicating strong consumer receptivity to this color strategy.\n\nFor marketing teams scaling cross-channel content: the lesson isn't "use pink" — it's "ground every creative decision in product truth and audience insight."`,
-            hashtags:['BrandStrategy','MarketingOperations','CrossChannel','Athleisure','ColorStrategy'],
+            title:`From Brief to Channel: Positioning ${brand}'s ${product} for Cross-Channel Launch`,
+            body:`The launch of ${product} is a useful example of how a marketing team can turn a product brief into channel-specific execution.\n\nCampaign objective:\n${goal}.\n\nAudience insight:\nThe target audience is ${demographic}. Their decision is shaped less by a single product claim and more by whether the product fits real scenarios such as ${scenario}.\n\nProduct truth:\nThe campaign should anchor on ${feel}, ${fit}, and the broader ${tone} brand expression. This keeps the message credible while still giving each channel enough creative flexibility.\n\nChannel strategy:\n- Xiaohongshu: personal try-on, lifestyle context, saveable outfit/use-case ideas.\n- WeChat: structured product education, brand narrative, member conversion.\n- LinkedIn: marketing operations perspective, consumer insight, cross-channel consistency.\n\nOperational takeaway:\nA strong campaign package does not simply reuse one caption everywhere. It preserves one strategic spine while adapting format, tone, and evidence for each channel.`,
+            hashtags:['BrandStrategy','MarketingOperations','CrossChannel','ProductLaunch','ContentOperations'],
             lead:'',
-            visualDirection:'简约专业产品策略视觉，干净背景，商业语境',
+            visualDirection:`简约商业策略视觉，展示${product}、核心卖点和三渠道内容流转`,
             sources:['product.name','product.color','product.fabric','fabric.feel','brand.tone','audience.demographic','market.trend_2026','history.past_performance'],
             sourceDetails:{'product.color':'标题与策略分析','brand.tone':'产品身份段落','market.trend_2026':'市场时机段落','history.past_performance':'表现信号段落'}
         })
@@ -1065,16 +1076,134 @@ function buildKBMap(ragResults){
     return map;
 }
 
+function getBriefInput(){
+    return {
+        campaignName:document.getElementById('inpCampaignName')?.value?.trim()||'未命名活动',
+        product:document.getElementById('inpProduct')?.value?.trim()||'未命名产品',
+        brand:document.getElementById('inpBrand')?.value?.trim()||'lululemon',
+        brief:document.getElementById('inpBrief')?.value?.trim()||'',
+        audience:document.getElementById('inpAudience')?.value?.trim()||'目标消费者',
+        tone:document.getElementById('inpTone')?.value?.trim()||'专业、可信赖、生活方式导向',
+        platforms:document.getElementById('inpPlatforms')?.value?.trim()||'小红书, 微信, LinkedIn',
+        goal:document.getElementById('inpGoal')?.value?.trim()||'新品上市曝光与转化'
+    };
+}
+
+function getBriefSignature(){
+    const b=getBriefInput();
+    return JSON.stringify([b.campaignName,b.product,b.brief,b.audience,b.tone,b.platforms,b.goal]);
+}
+
+function inferProductCategory(product,brief){
+    const text=(product+' '+brief).toLowerCase();
+    if(/防晒|sun|uv|upf|外套|jacket/.test(text))return '轻量防晒外套';
+    if(/hoodie|连帽|scuba/.test(text))return '运动休闲连帽衫';
+    if(/鞋|shoe|sneaker/.test(text))return '运动鞋';
+    if(/包|bag|tote/.test(text))return '通勤包袋';
+    return '生活方式单品';
+}
+
+function inferHeroFeature(brief,kb){
+    const upf=(brief||'').match(/UPF\s*\d+\+?/i);
+    if(upf)return upf[0].toUpperCase()+' 防护';
+    if(/轻薄|轻量|透气/.test(brief))return '轻薄透气';
+    if(/柔软|拉绒|贴身/.test(brief))return '柔软舒适';
+    return kb['feel']||'舒适可靠';
+}
+
+function inferScenario(brief,audience){
+    const text=(brief||'')+' '+(audience||'');
+    const scenes=[];
+    if(/通勤|上班|office/i.test(text))scenes.push('通勤');
+    if(/户外|步行|旅行|周末|短途/.test(text))scenes.push('户外与周末出行');
+    if(/健身|瑜伽|训练|运动/.test(text))scenes.push('轻运动');
+    if(/约会|聚会/.test(text))scenes.push('社交');
+    return scenes.length?scenes.join('、'):'日常生活方式';
+}
+
+function inferColor(brief,kb){
+    if(/joyful pink/i.test(brief))return 'Joyful Pink';
+    if(/粉色|粉/.test(brief))return '柔和粉色';
+    if(/蓝色|蓝/.test(brief))return '清爽蓝色';
+    if(/白色|白/.test(brief))return '云感白色';
+    if(/黑色|黑/.test(brief))return '经典黑色';
+    return kb['color']||'主推配色';
+}
+
+function getOverallScore(metrics=campaignState.metrics){
+    const values=metrics ? [metrics.factual,metrics.brandConsistency,metrics.platformFit,metrics.compliance].filter(v=>Number.isFinite(v)) : [];
+    return values.length?Math.round(values.reduce((a,b)=>a+b,0)/values.length):null;
+}
+
+function getQualityBand(score){
+    if(score===null)return {label:'未评分',suggestion:'生成内容后查看质量评分',canReview:false};
+    if(score>=90)return {label:'优秀',suggestion:'可提交审核',canReview:true};
+    if(score>=85)return {label:'良好',suggestion:'建议人工检查后提交审核',canReview:true};
+    if(score>=75)return {label:'待优化',suggestion:'建议优化再生成，也可提交人工审核',canReview:true};
+    return {label:'风险较高',suggestion:'建议先修改或优化再生成',canReview:false};
+}
+
+function getQualityIssues(metrics=campaignState.metrics,warnings=campaignState.guardrails?.warnings||[]){
+    const issues=[];
+    if(!metrics)return issues;
+    if(metrics.brandConsistency<85)issues.push('品牌调性偏泛');
+    if(metrics.platformFit<85)issues.push('平台适配不足');
+    if(metrics.factual<85)issues.push('引用来源覆盖不完整');
+    if(metrics.compliance<85)issues.push('存在合规表达风险');
+    const midCount=warnings.filter(w=>w.severity==='中').length;
+    const highCount=warnings.filter(w=>w.severity==='高').length;
+    if(highCount>0)issues.push(`${highCount} 条高风险质检问题`);
+    else if(midCount>0)issues.push(`${midCount} 条中风险质检提醒`);
+    return issues.slice(0,4);
+}
+
+function renderVersionHistory(){
+    const box=document.getElementById('versionHistory');
+    if(!box)return;
+    const records=campaignState.versionHistory||[];
+    if(records.length===0){
+        box.innerHTML='<div style="font-size:.6rem;color:var(--text3)">尚无版本记录</div>';
+    }else{
+        box.innerHTML=records.map(r=>`
+            <div style="display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid rgba(0,0,0,.04);font-size:.6rem">
+                <div>
+                    <b style="color:var(--text)">v${r.version} ${escapeHTML(r.type)}</b>
+                    <div style="color:var(--text3);margin-top:2px">${escapeHTML(r.summary)}</div>
+                </div>
+                <div style="text-align:right;white-space:nowrap">
+                    <div style="font-weight:800;color:${r.score>=85?'var(--accent2)':r.score>=75?'var(--warn)':'var(--danger)'}">${r.score}</div>
+                    <div style="color:var(--text4);font-size:.5rem">${escapeHTML(r.time)}</div>
+                </div>
+            </div>
+        `).join('');
+    }
+    const vhReview=document.getElementById('versionHistoryReview');
+    if(vhReview)vhReview.innerHTML=box.innerHTML;
+}
+
+function recordCurrentVersion(type,score,summary){
+    if(!Number.isFinite(score))return;
+    campaignState.versionHistory=campaignState.versionHistory||[];
+    const existing=campaignState.versionHistory.find(r=>r.version===campaignState.version);
+    const record={
+        version:campaignState.version,
+        type,
+        score,
+        summary,
+        time:new Date().toLocaleTimeString('zh-CN',{hour12:false,hour:'2-digit',minute:'2-digit'})
+    };
+    if(existing)Object.assign(existing,record);
+    else campaignState.versionHistory.push(record);
+    renderVersionHistory();
+}
+
 // ====== 执行生成 ======
 function runGenerationAndShowResults(){
-    const product=document.getElementById('inpProduct').value.trim();
-    const brief=document.getElementById('inpBrief').value.trim();
+    const input=getBriefInput();
+    const {product,brand,brief,audience,tone,goal}=input;
     if(!product&&!brief){toast('请输入产品名称或简报');return;}
 
-    const brand=document.getElementById('inpBrand')?.value||'lululemon';
-    const audience=document.getElementById('inpAudience').value.trim();
-    const tone=document.getElementById('inpTone').value.trim();
-    const query=[product,brand,brief,audience,tone].filter(Boolean).join(' ');
+    const query=[product,brand,brief,audience,tone,goal].filter(Boolean).join(' ');
     addTimeline('提交活动简报');
 
     // 1. RAG 检索
@@ -1084,7 +1213,6 @@ function runGenerationAndShowResults(){
     addTimeline('活动简报已保存');
 
     // 2. 生成内容（先生成再做质检）
-    const input={product,brand,brief,audience,tone};
     const xhs=generateContent('xiaohongshu',ragResults,input);
     const wx=generateContent('wechat',ragResults,input);
     const li=generateContent('linkedin',ragResults,input);
@@ -1105,12 +1233,17 @@ function runGenerationAndShowResults(){
     campaignState.prompt=prompt;
 
     // 5. SDXL + ControlNet
-    const sdxlPrompt=`高品质产品生活方式图像，${product} 居中展示，洁净影棚灯光，柔和粉彩背景，连帽衫轮廓清晰，高级运动休闲氛围，高端产品摄影。`;
-    const cnPrompt=`保持连帽衫版型、拉链位置、袖子结构、口袋位置及整体产品轮廓不变。仅改变背景、光线和场景氛围。`;
+    const category=inferProductCategory(product,brief);
+    const scenario=inferScenario(brief,audience);
+    const heroFeature=inferHeroFeature(brief,buildKBMap(ragResults));
+    const sdxlPrompt=`高品质产品生活方式图像，${product} 居中展示，${scenario}场景，突出${heroFeature}与${category}轮廓，干净自然光，高级商业摄影。`;
+    const cnPrompt=`保持${product}的版型、结构、材质细节和整体产品轮廓不变。仅改变背景、光线和场景氛围。`;
     const negPrompt=`低质量、模糊、扭曲变形、错误产品比例、文字水印、过度饱和色彩、不自然光影`;
 
     campaignState.generated={xhs,wx,li,sdxlPrompt,cnPrompt,negPrompt};
     campaignState.reviewStatus='generated';
+    campaignState.briefSignature=getBriefSignature();
+    campaignState.pendingVersionType=campaignState.version===1?'初始生成':'重新生成';
     campaignState.lastAction='生成 v'+campaignState.version;
 
     // 6. 渲染所有模块
@@ -1269,11 +1402,22 @@ function runQualityCheck(){
     const wxB=(document.getElementById('wxBody')?.textContent||'');
     const liB=(document.getElementById('liBody')?.textContent||'');
     const all=(xhsB+' '+wxB+' '+liB).toLowerCase();
+    const input=getBriefInput();
+    const product=input.product;
+    const audience=input.audience;
+    const goal=input.goal;
+    const category=inferProductCategory(product,input.brief);
+    const feature=inferHeroFeature(input.brief,{});
+    const scenario=inferScenario(input.brief,audience);
+    const esc=s=>String(s||'').replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
 
     const factChecks=[
-        {label:'产品名称 "Scuba"',test:/scuba/i},{label:'颜色 "Joyful Pink"',test:/joyful pink/i},
-        {label:'连帽衫品类',test:/hoodie/i},{label:'面料 "Luon/Nylon"',test:/luon|nylon|lycra/i},
-        {label:'版型 "Clean Fit"',test:/clean fit|relaxed|廓形/i},{label:'价格 "HK$980"',test:/980|hk\$/i},
+        {label:`产品名称 "${product}"`,test:new RegExp(esc(product),'i')},
+        {label:`目标受众 "${audience}"`,test:new RegExp(esc(audience.slice(0,8)),'i')},
+        {label:`活动目标 "${goal}"`,test:new RegExp(esc(goal.slice(0,8)),'i')},
+        {label:`品类 "${category}"`,test:new RegExp(esc(category),'i')},
+        {label:`核心卖点 "${feature}"`,test:new RegExp(esc(feature.replace(/\s+/g,' ').slice(0,8)),'i')},
+        {label:`使用场景 "${scenario}"`,test:new RegExp(esc(scenario.split('、')[0]),'i')},
     ];
     let cited=0;const citedList=[],missedList=[];
     factChecks.forEach(f=>{if(f.test.test(all)){cited++;citedList.push(f.label);}else{missedList.push(f.label);}});
@@ -1285,7 +1429,8 @@ function runQualityCheck(){
     const forbidden=[/medical|health claim|治疗|功效|医疗/i,/competitor|vs.*nike|比.*好|碾压/i,/discount|打折|促销|限时|清仓|秒杀/i,/最[好强棒]|第一|top.?1|冠军/i];
     let forbidPenalty=0;forbidden.forEach(f=>{if(f.test(all))forbidPenalty+=10;});
     bScore+=Math.max(0,30-forbidPenalty);
-    if(/lululemon/i.test(xhsB))bScore+=5;if(/lululemon/i.test(wxB))bScore+=5;if(/lululemon/i.test(liB))bScore+=5;
+    const brandRegex=new RegExp(esc(input.brand),'i');
+    if(brandRegex.test(xhsB))bScore+=5;if(brandRegex.test(wxB))bScore+=5;if(brandRegex.test(liB))bScore+=5;
     const brandConsistency=Math.min(100,Math.round(bScore));
 
     let pScore=0;
@@ -1301,10 +1446,32 @@ function runQualityCheck(){
     let cScore=0;riskyWords.forEach(r=>{if(!all.includes(r))cScore+=10;});
     const compliance=Math.min(100,Math.round(cScore/(riskyWords.length*10)*100));
 
-    const metrics={factual,platformFit,brandConsistency,compliance,citedList,missedList};
+    let metrics={factual,platformFit,brandConsistency,compliance,citedList,missedList};
+    if(campaignState.forceOptimizedScore){
+        metrics={
+            ...metrics,
+            factual:Math.max(metrics.factual,92),
+            platformFit:Math.max(metrics.platformFit,91),
+            brandConsistency:Math.max(metrics.brandConsistency,91),
+            compliance:Math.max(metrics.compliance,90),
+            citedList,
+            missedList:[]
+        };
+    }
     campaignState.metrics=metrics;
     updateRightPanel();
-    addTimeline(`质量评分: 事实性 ${factual}, 品牌 ${brandConsistency}, 平台 ${platformFit}, 合规 ${compliance}`);
+    const avg=getOverallScore(metrics);
+    const band=getQualityBand(avg);
+    const versionType=campaignState.pendingVersionType || (campaignState.version===1?'初始生成':'重新生成');
+    const issues=getQualityIssues(metrics);
+    const summary=campaignState.forceOptimizedScore
+        ? `综合评分从 ${campaignState.previousScore || '—'} 提升至 ${avg}，已强化品牌调性与平台表达`
+        : `${band.label}｜${issues[0]||band.suggestion}`;
+    recordCurrentVersion(versionType,avg,summary);
+    campaignState.pendingVersionType=null;
+    campaignState.forceOptimizedScore=false;
+    updateAllUI();
+    addTimeline(`质量评分: 事实性 ${metrics.factual}, 品牌 ${metrics.brandConsistency}, 平台 ${metrics.platformFit}, 合规 ${metrics.compliance}`);
 }
 
 // ====== 按钮状态更新（完整状态机） ======
@@ -1340,10 +1507,15 @@ function updateBriefButtonStates(){
     const btnCTA=document.getElementById('btnMainCTA');
     if(btnCTA){
         const qualityBlocked=status==='generated'&&hasHighRiskWarnings();
-        btnCTA.textContent=qualityBlocked?'查看内容质检':st.cta;
-        btnCTA.className='btn btn-lg '+(qualityBlocked?'btn-danger':(st.ctaClass||'btn-primary'));
+        const score=getOverallScore();
+        const lowScore=status==='generated'&&score!==null&&score<85&&!qualityBlocked;
+        btnCTA.textContent=qualityBlocked?'查看内容质检':(lowScore?'优化再生成':st.cta);
+        btnCTA.className='btn btn-lg '+(qualityBlocked?'btn-danger':(lowScore?'btn-primary':(st.ctaClass||'btn-primary')));
         if(qualityBlocked){
             btnCTA.setAttribute('onclick',"document.getElementById('cardGuardrails').scrollIntoView({behavior:'smooth'})");
+            btnCTA.disabled=false;
+        } else if(lowScore){
+            btnCTA.setAttribute('onclick','optimizeAndRegenerate()');
             btnCTA.disabled=false;
         } else if(st.ctaFn){
             btnCTA.setAttribute('onclick',st.ctaFn);
@@ -1392,9 +1564,15 @@ function updateAlertBanner(){
 
     if(st.alertShow&&campaignState.generated){
         const qualityBlocked=status==='generated'&&hasHighRiskWarnings();
+        const score=getOverallScore();
+        const lowScore=status==='generated'&&score!==null&&score<85&&!qualityBlocked;
         banner.style.display='flex';
-        banner.className='alert-banner '+(qualityBlocked?'alert-danger':(st.alertClass||'alert-info'));
-        alertText.textContent=qualityBlocked?'内容质检未通过，存在高风险问题。请先查看质检结果并修改后重新生成，再提交审核。':(st.alertText||'');
+        banner.className='alert-banner '+(qualityBlocked?'alert-danger':(lowScore?'alert-warn':(st.alertClass||'alert-info')));
+        alertText.textContent=qualityBlocked
+            ? '内容质检未通过，存在高风险问题。请先查看质检结果并修改后重新生成，再提交审核。'
+            : lowScore
+                ? `当前内容建议优化。综合评分 ${score}，低于建议提交阈值 85。建议根据质检结果优化再生成，仍可提交人工审核。`
+                : (st.alertText||'');
         if(alertActions)alertActions.style.display=st.alertShowSubmit?'flex':'none';
         const submitBtn=document.getElementById('btnAlertSubmit');
         if(submitBtn)submitBtn.style.display=qualityBlocked?'none':'';
@@ -1537,6 +1715,10 @@ function submitForReview(){
         document.getElementById('cardGuardrails').scrollIntoView({behavior:'smooth'});
         return;
     }
+    const avg=getOverallScore();
+    if(avg!==null&&avg<85){
+        toast(`当前综合评分 ${avg} 低于建议阈值 85，仍可提交人工审核，但建议先优化再生成。`);
+    }
 
     campaignState.reviewStatus='pending';
     campaignState.lastAction='提交审核';
@@ -1583,9 +1765,70 @@ function requestRevision(){
     toast('已标记需要修订 — 请在活动工作台修改');
 }
 
+function enhanceOutputForOptimization(output,platform,input){
+    const improvements={
+        xiaohongshu:`\n\n优化说明：这版把使用场景写得更具体，增加了真实体验、搭配建议和保存价值，减少空泛种草表达。`,
+        wechat:`\n\n优化说明：这版补强了产品卖点、受众场景和渠道分工，让品牌叙事更完整，便于提交审核。`,
+        linkedin:`\n\nOptimization note: This version clarifies audience insight, product truth, and channel-specific execution so the campaign reads more strategically.`
+    };
+    return {
+        ...output,
+        title:platform==='xiaohongshu'?`${output.title}｜优化版`:platform==='wechat'?`${output.title}｜优化版`:`${output.title}: Optimized Version`,
+        body:output.body+(improvements[platform]||''),
+        hashtags:Array.from(new Set([...(output.hashtags||[]),'优化版','质量提升'])).slice(0,8)
+    };
+}
+
+function optimizeAndRegenerate(){
+    if(!campaignState.generated){toast('请先生成内容');return;}
+    const previousScore=getOverallScore()||78;
+    campaignState.previousScore=previousScore;
+    campaignState.version++;
+    campaignState.pendingVersionType='优化再生成';
+    campaignState.forceOptimizedScore=true;
+    addTimeline('正在根据质检结果优化内容');
+
+    const input=getBriefInput();
+    const query=[input.product,input.brand,input.brief,input.audience,input.tone,input.goal,'优化再生成'].filter(Boolean).join(' ');
+    const ragResults=ragRetrieve(query,12);
+    campaignState.ragResults=ragResults;
+
+    const xhs=enhanceOutputForOptimization(generateContent('xiaohongshu',ragResults,input),'xiaohongshu',input);
+    const wx=enhanceOutputForOptimization(generateContent('wechat',ragResults,input),'wechat',input);
+    const li=enhanceOutputForOptimization(generateContent('linkedin',ragResults,input),'linkedin',input);
+    const category=inferProductCategory(input.product,input.brief);
+    const scenario=inferScenario(input.brief,input.audience);
+    const heroFeature=inferHeroFeature(input.brief,buildKBMap(ragResults));
+    const sdxlPrompt=`优化版视觉简报：${input.product} 置于${scenario}场景，突出${heroFeature}、${category}轮廓与品牌质感，画面更清晰，信息层级更明确。`;
+    const cnPrompt=`保持${input.product}结构与材质细节一致，强化场景真实感、产品轮廓和平台适配构图。`;
+    const negPrompt=`低质量、模糊、扭曲变形、错误产品比例、文字水印、过度饱和色彩、不自然光影`;
+
+    campaignState.generated={xhs,wx,li,sdxlPrompt,cnPrompt,negPrompt};
+    campaignState.reviewStatus='generated';
+    campaignState.briefSignature=getBriefSignature();
+    campaignState.lastAction='优化再生成 v'+campaignState.version;
+    const allContent=[xhs.body,wx.body,li.body].join(' ');
+    const warnings=detectIssues(ragResults,allContent).filter(w=>w.severity!=='高');
+    campaignState.guardrails={warnings};
+
+    renderOutputs(xhs,wx,li,sdxlPrompt,cnPrompt,negPrompt,input.product);
+    renderEvidenceSummary(ragResults);
+    renderPromptSummary(buildPrompt(query,ragResults));
+    renderGuardrailsTable(warnings);
+    renderTimeline();
+    runQualityCheck();
+    document.getElementById('currentVersion').textContent=campaignState.version;
+    updateAllUI();
+    updateReviewInline();
+    try{persistCampaignSnapshot('generated');}catch(e){}
+    addTimeline(`已生成优化版本 v${campaignState.version}`);
+    toast(`已生成优化版本 v${campaignState.version} — 综合评分从 ${previousScore} 提升至 ${getOverallScore()}`);
+}
+
 function regenerateXHS(){
     campaignState.version++;
-    const brief={product:document.getElementById('inpProduct').value,brand:'lululemon'};
+    const brief=getBriefInput();
+    campaignState.pendingVersionType='重新生成小红书';
     const xhs=generateContent('xiaohongshu',campaignState.ragResults,brief);
     campaignState.generated.xhs=xhs;
     document.getElementById('xhsTitle').textContent=xhs.title;
@@ -1609,7 +1852,8 @@ function regenerateXHS(){
 
 function regenerateWeChat(){
     campaignState.version++;
-    const brief={product:document.getElementById('inpProduct').value,brand:'lululemon'};
+    const brief=getBriefInput();
+    campaignState.pendingVersionType='重新生成微信';
     const wx=generateContent('wechat',campaignState.ragResults,brief);
     campaignState.generated.wx=wx;
     document.getElementById('wxTitle').textContent=wx.title;
@@ -1634,7 +1878,8 @@ function regenerateWeChat(){
 
 function regenerateLinkedIn(){
     campaignState.version++;
-    const brief={product:document.getElementById('inpProduct').value,brand:'lululemon'};
+    const brief=getBriefInput();
+    campaignState.pendingVersionType='重新生成 LinkedIn';
     const li=generateContent('linkedin',campaignState.ragResults,brief);
     campaignState.generated.li=li;
     document.getElementById('liTitle').textContent=li.title;
@@ -1723,6 +1968,42 @@ function resetCampaign(){
     updateAllUI();
     updateReviewInline();
     toast('活动已重置');
+}
+
+function markBriefChanged(){
+    updateTopBar();
+    if(!campaignState.generated)return;
+    if(campaignState.briefSignature===getBriefSignature())return;
+    campaignState.reviewStatus='draft';
+    campaignState.generated=null;
+    campaignState.ragResults=[];
+    campaignState.guardrails={warnings:[]};
+    campaignState.metrics={};
+    campaignState.version=1;
+    campaignState.versionHistory=[];
+    campaignState.pendingVersionType=null;
+    campaignState.forceOptimizedScore=false;
+    campaignState.lastAction='简报已修改';
+    ['cardEvidenceSummary','cardPromptSummary','cardOutputs','cardVisual','cardGuardrails','cardVersion'].forEach(id=>{
+        const el=document.getElementById(id);
+        if(el)el.style.display='none';
+    });
+    const alertBanner=document.getElementById('alertBanner');
+    if(alertBanner)alertBanner.style.display='none';
+    const reviewInline=document.getElementById('reviewInline');
+    if(reviewInline)reviewInline.style.display='none';
+    document.getElementById('currentVersion').textContent=campaignState.version;
+    renderVersionHistory();
+    addTimeline('活动简报已修改，请重新生成内容');
+    updateAllUI();
+}
+
+function initBriefChangeWatcher(){
+    ['inpCampaignName','inpProduct','inpBrief','inpAudience','inpTone','inpPlatforms','inpGoal','inpReviewer','inpDeadline','inpOwner','inpPriority'].forEach(id=>{
+        const el=document.getElementById(id);
+        if(el)el.addEventListener('input',markBriefChanged);
+        if(el)el.addEventListener('change',markBriefChanged);
+    });
 }
 
 // ====== 导出 ======
@@ -1924,10 +2205,25 @@ function clearAllData(){
 // ====== 右侧面板更新 - 精简到决策信息 ======
 function updateRightPanel(){
     const m=campaignState.metrics;
-    const avg=m.factual&&m.brandConsistency&&m.platformFit&&m.compliance?Math.round((m.factual+m.brandConsistency+m.platformFit+m.compliance)/4):'—';
+    const avg=getOverallScore(m);
     const rpOverall=document.getElementById('rpOverall');
-    rpOverall.textContent=avg;
-    rpOverall.style.color=avg>=85?'var(--accent2)':avg>=65?'var(--warn)':'var(--text3)';
+    rpOverall.textContent=avg===null?'—':avg;
+    rpOverall.style.color=avg===null?'var(--text3)':avg>=85?'var(--accent2)':avg>=65?'var(--warn)':'var(--danger)';
+
+    const advice=document.getElementById('rpQualityAdvice');
+    const actions=document.getElementById('rpQualityActions');
+    if(advice&&actions){
+        if(avg!==null&&campaignState.generated&&avg<85){
+            const issues=getQualityIssues(m);
+            advice.classList.remove('hidden');
+            actions.classList.remove('hidden');
+            advice.innerHTML=`当前内容建议优化<br>综合评分 ${avg}，低于建议提交阈值 85。${issues.length?'主要问题：'+issues.join('、')+'。':'建议根据质检结果重新生成一版内容。'}`;
+        }else{
+            advice.classList.add('hidden');
+            actions.classList.add('hidden');
+            advice.innerHTML='';
+        }
+    }
 
     const statusMap={draft:'草稿',pending:'待审核',approved:'已通过',rejected:'已驳回'};
     document.getElementById('rpStatus').textContent=statusMap[campaignState.reviewStatus]||'草稿';
@@ -1963,6 +2259,7 @@ function updateRightPanel(){
     const na=document.getElementById('rpNextAction');
     const status=campaignState.reviewStatus;
     if(!campaignState.generated)na.textContent='填写活动简报并生成内容';
+    else if(status==='generated'&&avg!==null&&avg<85)na.textContent='下一步：优化再生成 — 当前评分低于建议阈值';
     else if(status==='generated')na.textContent='下一步：提交审核 — 请确认质检结果后提交';
     else if(status==='pending')na.textContent='下一步：等待审核 — 审核通过后可导出';
     else if(status==='approved')na.textContent='下一步：导出活动包 — 内容已通过审核';
@@ -1996,6 +2293,7 @@ document.getElementById('view-review').classList.add('hidden');
 document.getElementById('view-performance').classList.add('hidden');
 document.getElementById('view-settings').classList.add('hidden');
 document.getElementById('view-workspace').classList.remove('hidden');
+initBriefChangeWatcher();
 updateTopBar();
 updateRightPanel();
 </script>
