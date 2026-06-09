@@ -6,9 +6,9 @@
 
 ## 演示视频
 
-[点击查看完整操作演示](assets/demo.mov)
+[点击查看完整操作演示](assets/demo.mp4)
 
-<video src="assets/demo.mov" controls width="100%"></video>
+<video src="assets/demo.mp4" controls width="100%"></video>
 
 ---
 
