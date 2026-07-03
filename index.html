@@ -708,6 +708,23 @@ const DEFAULT_KB = [
     {id:"H02",category:"history",key:"learnings",value:"标题含颜色词 CTR +18%，生活场景图比棚拍图互动高 35%",source:"数据分析",confidence:0.85,weight:5,last_updated:"2026-06-05",used_count:8,tags:["洞察"]},
 ];
 
+const PLATFORM_RULES = [
+    {id:"RULE-XHS-001",platform:"小红书",category:"platform_rule",key:"xhs_disclosure",rule_type:"官方公开规则",source:"小红书社区规范 / 蒲公英商业内容规则",value:"商业合作、利益相关或营销推广内容需要明确披露，避免伪装成纯用户体验。",risk:"高",severity:"中",weight:9,confidence:0.88,pattern:/(合作|赞助|推广|广告|品牌方|种草合作)/i,suggestion:"如属于商业合作，补充“品牌合作/商业合作”披露；如非合作，避免使用暗示合作的措辞。",tags:["小红书","披露","商业内容"]},
+    {id:"RULE-XHS-002",platform:"小红书",category:"platform_rule",key:"xhs_external_traffic",rule_type:"官方公开规则",source:"小红书社区规范 / 交易导流治理",value:"避免明显站外导流、私信交易、绕开平台交易或引导到非平台渠道完成购买。",risk:"高",severity:"高",weight:10,confidence:0.9,pattern:/(私信|加微信|VX|v信|扫码|外链|淘宝|天猫|下单链接|代购|转账|进群)/i,suggestion:"改为“可在官方渠道了解更多”或“前往品牌官方页面查看”。",tags:["小红书","导流","交易"]},
+    {id:"RULE-XHS-003",platform:"小红书",category:"platform_rule",key:"xhs_experience_tone",rule_type:"隐含经验规则",source:"历史审核/投放经验沉淀",value:"小红书内容应更像真实体验和场景种草，过强硬广、堆叠卖点会降低自然感和通过率。",risk:"中",severity:"低",weight:6,confidence:0.72,pattern:/(全网首发|官方重磅|立即购买|强势上市|爆款必买)/i,suggestion:"改成第一人称体验、使用场景、搭配建议和保存价值。",tags:["小红书","隐含规则","种草表达"]},
+    {id:"RULE-WX-001",platform:"微信",category:"platform_rule",key:"wx_inducement",rule_type:"官方公开规则",source:"微信公众平台运营规范 / 诱导分享治理",value:"避免诱导分享、诱导关注、分享后领取利益等行为。",risk:"高",severity:"高",weight:10,confidence:0.92,pattern:/(转发.*领取|分享.*获得|集赞|砍价|拉好友|关注后领取|朋友圈.*领)/i,suggestion:"改为自然 CTA，例如“欢迎分享给需要的朋友”。",tags:["微信","诱导分享","运营规范"]},
+    {id:"RULE-WX-002",platform:"微信",category:"platform_rule",key:"wx_false_marketing",rule_type:"官方公开规则",source:"微信公众平台运营规范 / 广告法合规",value:"避免虚假、夸大、绝对化或无法证明的营销表述。",risk:"高",severity:"高",weight:10,confidence:0.9,pattern:/(国家级|最高级|最佳|第一|唯一|顶级|永久|100%|绝对|保证有效|立刻见效|全网最低)/i,suggestion:"弱化绝对化表达，改为可证明的产品事实或用户体验描述。",tags:["微信","广告法","虚假宣传"]},
+    {id:"RULE-WX-003",platform:"微信",category:"platform_rule",key:"wx_article_structure",rule_type:"隐含经验规则",source:"历史内容表现沉淀",value:"微信更适合结构化品牌叙事，需要清楚的小标题、产品事实、行动建议和审慎表达。",risk:"中",severity:"低",weight:6,confidence:0.75,pattern:/^.{0,120}$/i,suggestion:"补充分段小标题、卖点解释、场景案例和行动建议。",tags:["微信","隐含规则","文章结构"]},
+    {id:"RULE-LI-001",platform:"LinkedIn",category:"platform_rule",key:"li_misleading_claims",rule_type:"官方公开规则",source:"LinkedIn Advertising Policies / Professional Community Policies",value:"广告和专业内容不得包含误导性、欺骗性、不可验证或夸大的商业效果承诺。",risk:"高",severity:"高",weight:10,confidence:0.9,pattern:/(guaranteed|100%|best|#1|number one|instant results|miracle|unbeatable|lowest price)/i,suggestion:"补充数据来源，或将绝对承诺改为趋势、观察和可验证事实。",tags:["LinkedIn","Ads Policy","misleading claims"]},
+    {id:"RULE-LI-002",platform:"LinkedIn",category:"platform_rule",key:"li_professional_tone",rule_type:"官方公开规则",source:"LinkedIn Professional Community Policies",value:"内容应保持专业、真实、尊重，避免过度情绪化销售话术或低质量互动诱导。",risk:"中",severity:"中",weight:8,confidence:0.86,pattern:/(buy now|limited time|act fast|don't miss|🔥|😍|疯狂|冲啊)/i,suggestion:"改为行业洞察、消费者行为、渠道策略或运营方法论表达。",tags:["LinkedIn","专业社区","语气"]},
+    {id:"RULE-LI-003",platform:"LinkedIn",category:"platform_rule",key:"li_business_context",rule_type:"隐含经验规则",source:"B2B 内容表现经验沉淀",value:"LinkedIn 内容需要有商业语境，避免只复用消费平台种草文案。",risk:"中",severity:"低",weight:6,confidence:0.72,pattern:/(OOTD|种草|姐妹|上身|穿搭日记)/i,suggestion:"改为 campaign objective、audience insight、channel strategy、operational takeaway 等商业结构。",tags:["LinkedIn","隐含规则","商业语境"]}
+].map(r=>({
+    ...r,
+    last_updated:"2026-07-03",
+    used_count:0,
+    detection:"关键词 + 语义规则预审"
+}));
+
 // ====== 投放效果模拟数据 ======
 const PERFORMANCE_MOCK = [
     {campaign:"Joyful Pink 新品上市",platform:"Xiaohongshu",ctr:4.8,engagement_rate:12.5,conversion_rate:2.1,brand_score:92,status:"learn"},
@@ -723,6 +740,7 @@ const CATEGORIES = {
     brand:{name:"品牌规则",color:"#A78BFA"},
     market:{name:"市场分析",color:"#F472B6"},
     platform:{name:"平台规则",color:"#34D399"},
+    platform_rule:{name:"平台预审规则",color:"#14B8A6"},
     history:{name:"历史数据",color:"#FB923C"},
 };
 
@@ -739,26 +757,32 @@ document.addEventListener('DOMContentLoaded',()=>{
 function loadKnowledgeBase(){
     const stored = localStorage.getItem('ai_mops_kb');
     if(stored){
-        try{knowledgeRecords=JSON.parse(stored);return;}catch(e){}
+        try{knowledgeRecords=mergePlatformRules(JSON.parse(stored));return;}catch(e){}
     }
     fetch('data/knowledge_base.json').then(r=>r.json()).then(d=>{
         const records = Array.isArray(d) ? d : (d.records && Array.isArray(d.records) ? d.records : []);
         if(records.length){
-            knowledgeRecords = records.map(r=>({
+            knowledgeRecords = mergePlatformRules(records.map(r=>({
                 ...r,
                 source:r.source||'knowledge_base.json',
                 confidence:r.confidence||0.85,
                 last_updated:r.last_updated||d.meta?.updated||'2026-06-08',
                 used_count:r.used_count||0
-            }));
+            })));
             updateTopBar();
             if(currentView==='knowledge') renderKBView();
         }
     }).catch(()=>{
-        knowledgeRecords = DEFAULT_KB;
+        knowledgeRecords = mergePlatformRules(DEFAULT_KB);
         updateTopBar();
     });
-    if(knowledgeRecords.length===0) knowledgeRecords = DEFAULT_KB;
+    if(knowledgeRecords.length===0) knowledgeRecords = mergePlatformRules(DEFAULT_KB);
+}
+
+function mergePlatformRules(records){
+    const existingIds=new Set((records||[]).map(r=>r.id));
+    const missingRules=PLATFORM_RULES.filter(r=>!existingIds.has(r.id));
+    return [...(records||[]),...missingRules];
 }
 
 async function tryConnectServer(){
@@ -946,6 +970,45 @@ function ragRetrieve(query,topK=12){
     return diverse.slice(0,topK);
 }
 
+function attachPlatformRules(ragResults){
+    const existingIds=new Set((ragResults||[]).map(r=>r.id));
+    const essentialRules=PLATFORM_RULES
+        .filter(r=>['高','中'].includes(r.risk))
+        .map(r=>({...r,retrieval_score:Math.max(8,r.weight||6),matched_keywords:['platform-rule']}));
+    return [...(ragResults||[]),...essentialRules.filter(r=>!existingIds.has(r.id))].slice(0,18);
+}
+
+function runPlatformRulePrecheck(outputs,sourceText=''){
+    const platformMap=[
+        {key:'xhs',name:'小红书',content:[sourceText,outputs?.xhs?.title,outputs?.xhs?.body,(outputs?.xhs?.hashtags||[]).join(' ')].join('\n')},
+        {key:'wx',name:'微信',content:[sourceText,outputs?.wx?.title,outputs?.wx?.lead,outputs?.wx?.body,(outputs?.wx?.hashtags||[]).join(' ')].join('\n')},
+        {key:'li',name:'LinkedIn',content:[sourceText,outputs?.li?.title,outputs?.li?.body,(outputs?.li?.hashtags||[]).join(' ')].join('\n')}
+    ];
+    const warnings=[];
+    platformMap.forEach(item=>{
+        const rules=PLATFORM_RULES.filter(r=>r.platform===item.name);
+        rules.forEach(rule=>{
+            const matched=rule.pattern ? rule.pattern.test(item.content||'') : false;
+            if(matched){
+                warnings.push({
+                    issue:`${item.name} 预审：${rule.value}`,
+                    severity:rule.severity||'中',
+                    detectedIn:`${item.name} 平台规则库 / 输入简报与生成内容`,
+                    systemAction:`命中 ${rule.rule_type}（${rule.id}）`,
+                    userSuggestion:rule.suggestion,
+                    status:rule.severity==='高'?'需修改':'建议优化',
+                    statusClass:rule.severity==='高'?'gr-status-high':'gr-status-mitigated',
+                    ruleId:rule.id,
+                    platform:item.name
+                });
+            }
+        });
+    });
+    const passedCount=PLATFORM_RULES.length-warnings.length;
+    campaignState.platformPrecheck={warnings,passedCount,total:PLATFORM_RULES.length,checkedAt:new Date().toISOString()};
+    return warnings;
+}
+
 // ====== 内容质检（AI Guardrails） - 升级为处理结果 ======
 function detectIssues(ragResults,contentText){
     const warnings=[];
@@ -1005,9 +1068,13 @@ ${(grouped.audience||[]).join('\n')||'(来自简报)'}
 微信：结构化品牌叙事、文章大纲、精致品牌语调、行动号召
 领英：专业、商业导向、产品定位与消费者情感、品牌一致性价值
 
+[平台规则预审约束]
+${(grouped.platform_rule||[]).slice(0,8).join('\n')||'使用公开平台规则与历史审核经验进行预审'}
+
 [内容质检规则]
 - 避免未经验证的医疗功效宣称
 - 避免夸大的效果宣称
+- 避免诱导分享、站外导流、无法证明的效果承诺
 - 产品信息必须基于事实
 - 导出前须经人工审核
 
@@ -1207,7 +1274,7 @@ function runGenerationAndShowResults(){
     addTimeline('提交活动简报');
 
     // 1. RAG 检索
-    const ragResults=ragRetrieve(query,12);
+    const ragResults=attachPlatformRules(ragRetrieve(query,12));
     addTimeline(`检索到 ${ragResults.length} 条知识库记录`);
     campaignState.ragResults=ragResults;
     addTimeline('活动简报已保存');
@@ -1219,13 +1286,13 @@ function runGenerationAndShowResults(){
     addTimeline('初稿 v'+campaignState.version+' 生成完成');
 
     // 3. 问题检测（基于生成内容）
-    const allContent=[xhs.body,wx.body,li.body].join(' ');
-    const warnings=detectIssues(ragResults,allContent);
+    const allContent=[xhs.title,xhs.body,wx.title,wx.body,li.title,li.body].join(' ');
+    const warnings=[...detectIssues(ragResults,allContent),...runPlatformRulePrecheck({xhs,wx,li},brief)];
     campaignState.guardrails={warnings};
     const highCount=warnings.filter(w=>w.severity==='高').length;
-    if(highCount>0)addTimeline(`内容质检：检测到 ${highCount} 条高风险问题，需修改后提交审核`);
-    else if(warnings.length>0)addTimeline(`内容质检已完成：${warnings.length} 条低风险提醒`);
-    else addTimeline('内容质检已完成：全部通过');
+    if(highCount>0)addTimeline(`内容质检与平台预审：检测到 ${highCount} 条高风险问题，需修改后提交审核`);
+    else if(warnings.length>0)addTimeline(`内容质检与平台预审完成：${warnings.length} 条低/中风险提醒`);
+    else addTimeline('内容质检与平台预审完成：全部通过');
 
     // 4. 构建 Prompt
     const prompt=buildPrompt(query,ragResults);
@@ -1352,7 +1419,7 @@ function renderGuardrailsTable(warnings){
         tbody.innerHTML=`<tr><td colspan="6" style="color:var(--accent2);text-align:center;padding:16px">所有质检项已通过，未发现问题</td></tr>`;
         document.getElementById('guardStatus').textContent='通过';
         document.getElementById('guardStatus').className='pill pill-green';
-        document.getElementById('guardSummary').textContent='质检结果：事实准确性、品牌调性偏移检测、平台适配检查、夸大/未证实表达检测、缺失信息检查均通过。可以提交审核。';
+        document.getElementById('guardSummary').textContent='质检结果：事实准确性、品牌调性偏移检测、平台适配检查、平台规则预审、夸大/未证实表达检测、缺失信息检查均通过。可以提交审核。';
     }else{
         tbody.innerHTML=warnings.map(w=>{
             const sevClass=w.severity==='高'?'gr-sev-high':w.severity==='中'?'gr-sev-mid':'gr-sev-low';
@@ -1368,11 +1435,11 @@ function renderGuardrailsTable(warnings){
         if(highCount>0){
             document.getElementById('guardStatus').textContent=`${highCount} 条高风险`;
             document.getElementById('guardStatus').className='pill pill-red';
-            document.getElementById('guardSummary').textContent=`内容质检未通过：存在 ${highCount} 条高风险问题，${midCount} 条中风险提醒，${lowCount} 条低风险提醒。请修改后重新生成再提交审核。`;
+            document.getElementById('guardSummary').textContent=`内容质检与平台预审未通过：存在 ${highCount} 条高风险问题，${midCount} 条中风险提醒，${lowCount} 条低风险提醒。请修改后重新生成再提交审核。`;
         } else {
             document.getElementById('guardStatus').textContent=`${warnings.length} 条提醒`;
             document.getElementById('guardStatus').className='pill pill-yellow';
-            document.getElementById('guardSummary').textContent=`内容质检已完成：发现 ${warnings.length} 条低/中风险提醒，不影响提交审核。检查项：事实准确性、品牌调性偏移检测、平台适配检查、夸大/未证实表达检测、缺失信息检查。`;
+            document.getElementById('guardSummary').textContent=`内容质检与平台预审已完成：发现 ${warnings.length} 条低/中风险提醒，不影响提交审核。检查项：事实准确性、品牌调性偏移检测、平台适配检查、平台规则预审、夸大/未证实表达检测、缺失信息检查。`;
         }
     }
 }
@@ -1790,7 +1857,7 @@ function optimizeAndRegenerate(){
 
     const input=getBriefInput();
     const query=[input.product,input.brand,input.brief,input.audience,input.tone,input.goal,'优化再生成'].filter(Boolean).join(' ');
-    const ragResults=ragRetrieve(query,12);
+    const ragResults=attachPlatformRules(ragRetrieve(query,12));
     campaignState.ragResults=ragResults;
 
     const xhs=enhanceOutputForOptimization(generateContent('xiaohongshu',ragResults,input),'xiaohongshu',input);
@@ -1807,8 +1874,8 @@ function optimizeAndRegenerate(){
     campaignState.reviewStatus='generated';
     campaignState.briefSignature=getBriefSignature();
     campaignState.lastAction='优化再生成 v'+campaignState.version;
-    const allContent=[xhs.body,wx.body,li.body].join(' ');
-    const warnings=detectIssues(ragResults,allContent).filter(w=>w.severity!=='高');
+    const allContent=[xhs.title,xhs.body,wx.title,wx.body,li.title,li.body].join(' ');
+    const warnings=[...detectIssues(ragResults,allContent),...runPlatformRulePrecheck({xhs,wx,li},input.brief)].filter(w=>w.severity!=='高');
     campaignState.guardrails={warnings};
 
     renderOutputs(xhs,wx,li,sdxlPrompt,cnPrompt,negPrompt,input.product);
@@ -1838,8 +1905,8 @@ function regenerateXHS(){
     campaignState.reviewStatus='generated';
     campaignState.lastAction='重新生成小红书 v'+campaignState.version;
     addTimeline('小红书重新生成 v'+campaignState.version);
-    const allContent=[xhs.body,campaignState.generated?.wx?.body||'',campaignState.generated?.li?.body||''].join(' ');
-    const warnings=detectIssues(campaignState.ragResults,allContent);
+    const allContent=[xhs.title,xhs.body,campaignState.generated?.wx?.title||'',campaignState.generated?.wx?.body||'',campaignState.generated?.li?.title||'',campaignState.generated?.li?.body||''].join(' ');
+    const warnings=[...detectIssues(campaignState.ragResults,allContent),...runPlatformRulePrecheck(campaignState.generated,getBriefInput().brief)];
     campaignState.guardrails={warnings};
     renderGuardrailsTable(warnings);
     updateAllUI();
@@ -1864,8 +1931,8 @@ function regenerateWeChat(){
     campaignState.reviewStatus='generated';
     campaignState.lastAction='重新生成微信 v'+campaignState.version;
     addTimeline('微信重新生成 v'+campaignState.version);
-    const allContent=[campaignState.generated?.xhs?.body||'',wx.body,campaignState.generated?.li?.body||''].join(' ');
-    const warnings=detectIssues(campaignState.ragResults,allContent);
+    const allContent=[campaignState.generated?.xhs?.title||'',campaignState.generated?.xhs?.body||'',wx.title,wx.body,campaignState.generated?.li?.title||'',campaignState.generated?.li?.body||''].join(' ');
+    const warnings=[...detectIssues(campaignState.ragResults,allContent),...runPlatformRulePrecheck(campaignState.generated,getBriefInput().brief)];
     campaignState.guardrails={warnings};
     renderGuardrailsTable(warnings);
     updateAllUI();
@@ -1889,8 +1956,8 @@ function regenerateLinkedIn(){
     campaignState.reviewStatus='generated';
     campaignState.lastAction='重新生成 LinkedIn v'+campaignState.version;
     addTimeline('LinkedIn 重新生成 v'+campaignState.version);
-    const allContent=[campaignState.generated?.xhs?.body||'',campaignState.generated?.wx?.body||'',li.body].join(' ');
-    const warnings=detectIssues(campaignState.ragResults,allContent);
+    const allContent=[campaignState.generated?.xhs?.title||'',campaignState.generated?.xhs?.body||'',campaignState.generated?.wx?.title||'',campaignState.generated?.wx?.body||'',li.title,li.body].join(' ');
+    const warnings=[...detectIssues(campaignState.ragResults,allContent),...runPlatformRulePrecheck(campaignState.generated,getBriefInput().brief)];
     campaignState.guardrails={warnings};
     renderGuardrailsTable(warnings);
     updateAllUI();
