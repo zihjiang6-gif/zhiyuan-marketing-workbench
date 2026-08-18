@@ -182,13 +182,14 @@ P01,product,name,Joyful Pink Scuba Hoodie,产品简报,0.95,10,产品名|核心"
                 <div class="form-grid">
                     <input class="inp" id="manId" placeholder="ID (如 P01)">
                     <select class="inp" id="manCat" style="cursor:pointer">
-                        <option value="product">product — 产品信息</option>
-                        <option value="fabric">fabric — 面料科技</option>
-                        <option value="audience">audience — 受众画像</option>
-                        <option value="brand">brand — 品牌规范</option>
-                        <option value="market">market — 市场定位</option>
-                        <option value="platform">platform — 平台规则</option>
-                        <option value="history">history — 历史数据</option>
+                        <option value="product">产品信息</option>
+                        <option value="fabric">面料科技</option>
+                        <option value="audience">目标受众</option>
+                        <option value="brand">品牌规则</option>
+                        <option value="market">市场分析</option>
+                        <option value="platform_rule">平台规则</option>
+                        <option value="history">历史数据</option>
+                        <option value="compliance">合规规则</option>
                     </select>
                     <input class="inp" id="manKey" placeholder="键 (如 name)">
                     <input class="inp" id="manWt" placeholder="权重 1-10 (如 8)" type="number" min="1" max="10" value="5">
@@ -260,15 +261,20 @@ const DEFAULT_KB = [
     {id:"B04",category:"brand",key:"no_go",value:"禁止医疗/健康功效宣称、禁止贬低竞品、禁止折扣紧迫感",source:"合规",confidence:1.0,weight:4,last_updated:"2026-06-05",used_count:22,tags:["禁区"]},
     {id:"C01",category:"market",key:"position",value:"高端运动休闲",source:"市场分析",confidence:0.85,weight:5,last_updated:"2026-06-05",used_count:7,tags:["定位"]},
     {id:"C02",category:"market",key:"trend_2026",value:"Clean Fit / Quiet Luxury / Barbiecore 粉色复兴",source:"趋势报告",confidence:0.8,weight:5,last_updated:"2026-06-05",used_count:6,tags:["趋势","核心"]},
-    {id:"PL01",category:"platform",key:"xhs_style",value:"第一人称/emoji丰富/hashtag/穿搭场景图/真实感",source:"平台分析",confidence:0.9,weight:6,last_updated:"2026-06-05",used_count:11,tags:["小红书","风格"]},
-    {id:"PL03",category:"platform",key:"wx_style",value:"品牌叙事/结构化/段落分明/封面图精美",source:"平台分析",confidence:0.9,weight:6,last_updated:"2026-06-05",used_count:8,tags:["微信","风格"]},
-    {id:"PL05",category:"platform",key:"li_style",value:"英文/专业洞察/数据支撑/商业价值/bullet points",source:"平台分析",confidence:0.9,weight:6,last_updated:"2026-06-05",used_count:7,tags:["LinkedIn","风格"]},
+    {id:"PL01",category:"platform_rule",key:"xhs_style",value:"第一人称/emoji丰富/hashtag/穿搭场景图/真实感",source:"平台分析",confidence:0.9,weight:6,last_updated:"2026-06-05",used_count:11,tags:["小红书","风格"]},
+    {id:"PL03",category:"platform_rule",key:"wx_style",value:"品牌叙事/结构化/段落分明/封面图精美",source:"平台分析",confidence:0.9,weight:6,last_updated:"2026-06-05",used_count:8,tags:["微信","风格"]},
+    {id:"PL05",category:"platform_rule",key:"li_style",value:"英文/专业洞察/数据支撑/商业价值/bullet points",source:"平台分析",confidence:0.9,weight:6,last_updated:"2026-06-05",used_count:7,tags:["LinkedIn","风格"]},
     {id:"H01",category:"history",key:"past_performance",value:"上一季粉色系列 XHS 互动率 4.2%，微信阅读量 12K+",source:"数据分析",confidence:0.9,weight:5,last_updated:"2026-06-05",used_count:6,tags:["历史","数据"]},
     {id:"H02",category:"history",key:"learnings",value:"标题含颜色词 CTR +18%，生活场景图比棚拍图互动高 35%",source:"数据分析",confidence:0.85,weight:5,last_updated:"2026-06-05",used_count:8,tags:["洞察"]},
 ];
 
-const CAT_COLORS = {product:'#4ADE80',fabric:'#60A5FA',audience:'#F59E0B',brand:'#A78BFA',market:'#F472B6',platform:'#34D399',history:'#FB923C',compliance:'#EF4444'};
-const CAT_NAMES = {product:'产品信息',fabric:'面料科技',audience:'受众画像',brand:'品牌规范',market:'市场定位',platform:'平台规则',history:'历史数据',compliance:'合规规则'};
+const CAT_COLORS = {product:'#4ADE80',fabric:'#60A5FA',audience:'#F59E0B',brand:'#A78BFA',market:'#F472B6',platform_rule:'#14B8A6',history:'#FB923C',compliance:'#EF4444'};
+const CAT_NAMES = {product:'产品信息',fabric:'面料科技',audience:'目标受众',brand:'品牌规则',market:'市场分析',platform_rule:'平台规则',history:'历史数据',compliance:'合规规则'};
+const CATEGORY_ALIASES = {platform:'platform_rule',platform_rule:'platform_rule',平台规则:'platform_rule',平台预审规则:'platform_rule'};
+
+function normalizeCategory(category){
+    return CATEGORY_ALIASES[category]||category||'product';
+}
 
 function escapeHTML(value){
     return String(value ?? '').replace(/[&<>"'`]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','`':'&#96;'}[ch]));
@@ -282,11 +288,11 @@ function init(){
 }
 function loadKB(){
     const stored=localStorage.getItem('ai_mops_kb');
-    if(stored){try{knowledgeRecords=JSON.parse(stored);console.log('[KB] 从 localStorage 加载:',knowledgeRecords.length);return;}catch(e){}}
+    if(stored){try{knowledgeRecords=JSON.parse(stored).map(normalizeRecord);saveKB();console.log('[KB] 从 localStorage 加载:',knowledgeRecords.length);return;}catch(e){}}
     fetch('data/knowledge_base.json').then(r=>r.json()).then(d=>{
         const records = Array.isArray(d) ? d : (d.records && Array.isArray(d.records) ? d.records : []);
         if(records.length){
-            knowledgeRecords=records.map(r=>({...r,source:r.source||'knowledge_base.json',confidence:r.confidence||0.85,last_updated:r.last_updated||d.meta?.updated||'2026-06-08',used_count:r.used_count||0}));
+            knowledgeRecords=records.map(r=>normalizeRecord({...r,source:r.source||'knowledge_base.json',confidence:r.confidence||0.85,last_updated:r.last_updated||d.meta?.updated||'2026-06-08',used_count:r.used_count||0}));
             renderStatus();
         }
     }).catch(()=>{knowledgeRecords=DEFAULT_KB;renderStatus();});
@@ -338,8 +344,9 @@ function validateData(records){
 }
 function normalizeRecord(r){
     return {
+        ...r,
         id:r.id||'',
-        category:r.category||'product',
+        category:normalizeCategory(r.category),
         key:r.key||'',
         value:r.value||'',
         source:r.source||'手动导入',
@@ -507,7 +514,7 @@ function exportKB(){
 function clearLocalKB(){localStorage.removeItem('ai_mops_kb');knowledgeRecords=DEFAULT_KB;renderStatus();document.getElementById('kbStorageMode').textContent='JSON 兜底';document.getElementById('kbStorageMode').className='pill pill-yellow';toast('localStorage 知识库已清空 — 使用兜底数据');}
 function loadFromJSONFile(){
     fetch('data/knowledge_base.json').then(r=>r.json()).then(d=>{
-        if(d.records){knowledgeRecords=d.records.map(r=>({...r,source:r.source||'knowledge_base.json',confidence:r.confidence||0.85,last_updated:r.last_updated||d.meta?.updated||'2026-06-05',used_count:r.used_count||0}));saveKB();renderStatus();toast('从 JSON 文件重新加载 — '+knowledgeRecords.length+' 条记录');}
+        if(d.records){knowledgeRecords=d.records.map(r=>normalizeRecord({...r,source:r.source||'knowledge_base.json',confidence:r.confidence||0.85,last_updated:r.last_updated||d.meta?.updated||'2026-06-05',used_count:r.used_count||0}));saveKB();renderStatus();toast('从 JSON 文件重新加载 — '+knowledgeRecords.length+' 条记录');}
     }).catch(()=>toast('加载 JSON 文件失败'));
 }
 function resetToDefault(){

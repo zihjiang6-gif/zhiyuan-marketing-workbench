@@ -109,7 +109,7 @@
   },
   {
     "id": "kb_platform_001",
-    "category": "platform",
+    "category": "platform_rule",
     "key": "xiaohongshu_style",
     "value": "小红书内容应偏生活方式种草，包含搭配场景、轻量 emoji、3-6 个 hashtag，语气自然不生硬",
     "source": "Platform Playbook",
@@ -121,7 +121,7 @@
   },
   {
     "id": "kb_platform_002",
-    "category": "platform",
+    "category": "platform_rule",
     "key": "wechat_style",
     "value": "微信内容适合结构化长文，强调色彩理念、面料廓形、场景搭配和清晰行动号召",
     "source": "Platform Playbook",
@@ -133,7 +133,7 @@
   },
   {
     "id": "kb_platform_003",
-    "category": "platform",
+    "category": "platform_rule",
     "key": "linkedin_style",
     "value": "LinkedIn 内容应偏商业洞察，强调市场趋势、消费者心理、跨渠道一致性和营销方法论",
     "source": "Platform Playbook",
