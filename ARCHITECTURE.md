@@ -1,395 +1,234 @@
 # 架构设计
 
-> 知源营销工作台技术架构 — 从原型到生产。
+> 知源 AI 内容工作台：从品牌事实到效果经验的内容学习闭环。
 
----
+## 1. 原型边界
 
-## 当前原型架构
+当前版本是一个无构建步骤、无后端依赖的浏览器端 Prototype。它验证的是产品工作流和数据分层，不代表真实大模型生成、平台发布或账号数据同步已经接通。
 
-原型是一个**仅浏览器端单页应用**，无构建步骤：
-
-```
-┌──────────────────────────────────────────────────────────┐
-│                    浏览器（客户端）                        │
-│                                                          │
-│  index.html          import.html                         │
-│  （活动工作区）        （知识库管理中心）                    │
-│       │                    │                             │
-│       └────────┬───────────┘                             │
-│                ▼                                         │
-│     ┌──────────────────────┐                             │
-│     │   应用状态             │                             │
-│     │   （JavaScript 对象）  │                             │
-│     └──────────┬───────────┘                             │
-│                │                                         │
-│     ┌──────────▼───────────┐                             │
-│     │   数据层               │                             │
-│     │   · localStorage      │ ← 用户导入的知识库           │
-│     │   · JSON fetch        │ ← data/knowledge_base.json │
-│     │   · 兜底记录           │ ← 硬编码演示数据            │
-│     └──────────────────────┘                             │
-│                                                          │
-│  可选: Express 服务 (server.js)                           │
-│  · 知识库检索与内容生成的 REST API                         │
-│  · RAG 引擎（关键词 + 权重匹配）                           │
-│  · 兜底生成的模板引擎                                      │
-│  · OpenAI API 集成（可选）                                │
-└──────────────────────────────────────────────────────────┘
+```text
+index.html
+  ├── assets/styles.css
+  ├── assets/app.js
+  ├── data/brand_knowledge.json
+  ├── data/channel_profiles.json
+  ├── data/experience_memory.json
+  └── data/performance_demo.json
 ```
 
-**原型关键设计决策:**
-- 零构建步骤 — 直接打开 index.html
-- 无框架 — 原生 HTML/CSS/JS，最大化可移植性
-- localStorage 作为主数据存储 — 页面刷新后数据保留
-- 优雅降级 — 无服务器可运行，有服务器体验更佳
+运行时以 JavaScript 内置安全演示数据启动，并用 localStorage 保存用户修改。静态 JSON 是数据契约与演示数据的可检查版本，便于后续迁移到 API。
 
----
+## 2. 七层结构
 
-## 生产架构
+### Brand Knowledge Layer
 
-### 系统总览
+保存长期稳定、需要被核验的事实：
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                        客户端层                                  │
-│  React / Next.js SPA                                            │
-│  · 活动工作区  · 知识库管理中心                                    │
-│  · 审核队列    · 效果仪表盘                                       │
-│  · 导出管理    · 设置                                            │
-└───────────────────────────┬─────────────────────────────────────┘
-                            │ HTTPS / REST API
-┌───────────────────────────▼─────────────────────────────────────┐
-│                       API 网关 (Node.js / FastAPI)               │
-│  · 认证 (JWT / OAuth)                                           │
-│  · 限流                                                         │
-│  · 请求验证                                                     │
-└───────┬───────────────────┬──────────────────┬──────────────────┘
-        │                   │                  │
-        ▼                   ▼                  ▼
-┌───────────────┐  ┌────────────────┐  ┌──────────────────┐
-│  PostgreSQL    │  │  向量存储       │  │  对象存储         │
-│                │  │                 │  │                   │
-│ · 用户         │  │ · KB 嵌入向量   │  │ · 活动素材        │
-│ · 活动         │  │ · 语义搜索      │  │ · 导出文件        │
-│ · 版本         │  │ · 相似度评分    │  │ · 图片            │
-│ · 审核         │  │                 │  │                   │
-│ · 分析         │  │                 │  │                   │
-└───────────────┘  └────────────────┘  └──────────────────┘
-        │                   │
-        └─────────┬─────────┘
-                  ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                       大模型 / AI 层                              │
-│  · OpenAI GPT-4o / Claude（文本生成）                            │
-│  · SDXL / DALL-E（图片生成）                                     │
-│  · ControlNet（图片中产品一致性）                                 │
-│  · AI Guardrails 质检模型（合规、语调）                           │
-└─────────────────────────────────────────────────────────────────┘
+- 品牌介绍、定位、表达风格、目标消费者、核心价值、禁止表达；
+- 产品名称、类别、介绍、卖点、规格、食用方式、场景；
+- 可使用事实与禁止推断。
+
+它回答：**这个品牌和产品是什么？**
+
+### Channel Profile Layer
+
+平台逻辑不散落在各个生成函数中，而是由统一 Profile 描述：
+
+```js
+{
+  id,
+  name,
+  contentType,
+  tone,
+  structure,
+  outputFields,
+  formatRule,
+  rules,
+  availableMetrics,
+  goalMetrics
+}
 ```
 
----
+MVP UI 只展示小红书、抖音、微信公众号。生成层通过 `CHANNEL_ADAPTERS` 集中管理三个原生适配器；新增 Profile 时，标准字段可使用通用生成回退，平台特有表达再补一个适配器。字段渲染、格式规则、可用指标和 Goal 指标都继续读取同一 Profile，不把平台判断散落到页面逻辑中。
 
-## 数据流
+### Experience Memory Layer
 
-### 完整请求生命周期
+只保存由历史表现支持的创作经验：
 
-```
-1. 导入知识
-   用户上传 JSON/CSV → 模式验证 → 去重检查
-   → 存储至 PostgreSQL（结构化）+ 向量库（嵌入向量）
-   → 返回导入摘要
-
-2. 创建活动
-   用户填写活动简报表单 → 验证必填字段
-   → 在 PostgreSQL 中创建活动记录（状态: 草稿）
-   → 记录时间线事件: "活动已创建"
-
-3. 生成依据
-   标准化活动简报 → 生成搜索查询
-   → 关键词搜索（PostgreSQL）+ 语义搜索（向量库）
-   → 合并去重结果 → 评分排序
-   → 冲突检测（相同分类+键，不同值）
-   → 缺失字段检测
-   → 返回前 8-12 条记录（含检索评分）
-
-4. 构建提示词
-   系统角色 + 产品信息 + 品牌规则 + 平台规则
-   + 合规规则 + 受众背景 + 历史案例
-   → 最终结构化提示词
-
-5. 生成内容
-   将提示词发送至大模型 API → 解析结构化响应
-   → 平台特定后处理（hashtag、格式）
-   → 存储生成内容及版本元数据
-   → 返回平台输出 + 来源引用
-
-6. 运行 AI Guardrails（内容质检机制）
-   事实准确性检查 → 品牌调性偏移检测 → 平台适配检查
-   → 夸大/未证实表达检测 → 合规风险评估
-   → 生成质量评分 → 标记提醒
-   → 记录质检结果
-
-7. 人工审核
-   展示输出 + 质检结果 + 质量评分
-   → 用户操作: 通过 / 驳回 / 编辑 / 重新生成
-   → 每次操作记录至时间线
-   → 状态更新: 草稿 → 待审核 → 已通过 / 已驳回
-
-8. 导出
-   打包活动包: 简报 + 证据 + 提示词 + 输出
-   + 质检 + 评分 + 审核状态 + 版本历史
-   → 生成 JSON + Markdown 文件
-   → 下载或保存至对象存储
-   → 记录时间线: "活动包已导出"
-
-9. 追踪效果
-   （发布后）从平台导入效果数据
-   → 存储至分析表
-   → 与质量预测对比
-   → 标记高表现内容
-
-10. 学习回写
-    运营人员审核高表现内容
-    → 作为历史活动案例添加至知识库
-    → 更新贡献知识记录的 used_count
-    → 未来生成将检索这些案例
+```js
+{
+  id,
+  platform,
+  product_category,
+  campaign_goal,
+  content_pattern,
+  insight,
+  source_content_id,
+  source_campaign,
+  metric_name,
+  metric_value,
+  baseline_value,
+  lift,
+  learned_at
+}
 ```
 
----
+它回答：**过去什么创作方式表现较好？**
 
-## RAG 设计
+Performance 不能直接回写 Brand Knowledge。只有用户在 Winner 详情中点击“加入创作经验”后，Pattern 才进入 Experience Memory。
 
-### 检索增强生成架构
+### Generation Layer
 
-系统采用**混合检索**方式，结合结构化搜索与语义搜索：
-
-```
-活动简报
-     │
-     ▼
-┌─────────────────┐
-│ 查询标准化器      │  → 提取: 产品名、关键词、受众、平台
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐    ┌─────────────────┐
-│ 关键词搜索       │    │ 语义搜索         │
-│ (PostgreSQL)    │    │ (向量库)         │
-│ · 精确匹配      │    │ · 嵌入相似度     │
-│ · 模糊匹配      │    │ · 上下文感知     │
-│ · 标签匹配      │    │ · 跨语言         │
-└────────┬────────┘    └────────┬────────┘
-         │                      │
-         └──────────┬───────────┘
-                    ▼
-         ┌─────────────────────┐
-         │  合并排序             │
-         │  · 评分聚合          │
-         │  · 多样性增强        │
-         │  · 冲突检测          │
-         │  · 缺失检测          │
-         └──────────┬──────────┘
-                    ▼
-         ┌─────────────────────┐
-         │  前 8-12 条记录      │
-         │  （含可追溯性）       │
-         └─────────────────────┘
+```text
+Campaign Brief
+     +
+Brand Knowledge
+     +
+Product Facts
+     +
+Channel Profile
+     +
+Relevant Experience
+        ↓
+Prompt Context（内部概念）
+        ↓
+LLM / 当前模板模拟
+        ↓
+Platform-native Content
 ```
 
-### 检索评分公式
+当前生成器为前端模板模拟，但不同平台返回不同 Schema：
 
-```
-retrieval_score = (
-    关键词匹配分 * 0.35 +
-    分类相关度 * 0.15 +
-    平台匹配 * 0.15 +
-    产品名匹配 * 0.10 +
-    标签匹配 * 0.10 +
-    可信度 * 0.05 +
-    权重 * 0.05 +
-    时效性加成 * 0.05
-)
-```
+- 小红书：标题、正文、话题、配图建议；
+- 抖音：Video Hook、时间段脚本、发布文案、话题、拍摄建议；
+- 微信公众号：标题、摘要、正文结构、完整正文、CTA、封面建议。
 
-### 来源引用
+相关经验按平台、产品类别、Campaign Goal、主题关键词加权匹配。`explorationRate = 0.2`：约 80% 充分参考高表现经验，约 20% 弱化历史模式并保留新表达角度。探索不会伪装成模型训练。
 
-每条生成输出都包含**本次引用来源**区域:
-- 列出引用了哪些知识记录
-- 显示记录 ID、键和值
-- 标明输出的哪个部分使用了哪个来源
-- 实现从输出到知识库的完整可追溯性
+### Quality Check Layer
 
-### 冲突检测
+底层检查包括：
 
-当两条记录共享相同的 `category + key` 但具有不同 `value` 时:
-1. 比较 `weight` 和 `confidence`（可信度）分数
-2. 选择综合得分更高的记录
-3. 记录警告: `冲突检测: {category}.{key} 存在多个值，已选择 "{value}"（基于最高权重/可信度）`
-4. 在质检面板显示警告
+- Product Fact Check；
+- Brand Tone Check；
+- Food Marketing Compliance Check；
+- Channel Format Check；
+- Unsupported Claim Detection。
 
-### 缺失信息检查
+Unsupported Claim 采用四类语义：
 
-生成所需的必要字段:
-- `product.name`、`product.color`、`product.fabric`、`product.fit`
-- `brand.tone`、`brand.no_go`
-- `audience.demographic`
-- `platform.{platform}_style`
-- `compliance.*`（任意合规规则）
+| 类别 | 含义 | 原型处理 |
+| --- | --- | --- |
+| Supported | 有品牌或产品资料支持 | 通过 |
+| Subjective | 主观口味或体验 | 允许，保持克制 |
+| Unsupported | 具体事实但无资料支持 | 提醒补资料或替换 |
+| Risky | 食品功效、绝对化或高风险表达 | 必须确认处理 |
 
-如有必要字段缺失，记录: `缺失信息: {field_path} 在知识库中未找到，使用默认值。`
+Prototype 使用规则与模拟语义检查。UI 只显示“发布前检查”和可执行建议，不向普通用户暴露技术分数。
 
----
+### Performance Layer
 
-## AI Guardrails（内容质检机制）
+Performance 记录按平台保留原始指标；不存在的字段必须为 `null`，不补零、不推算：
 
-### 质检层级
-
-```
-┌──────────────────────────────────────────┐
-│           第 1 层: 硬规则                  │
-│  · 禁止医疗/健康功效宣称                   │
-│  · 禁止贬低竞品                           │
-│  · 禁止折扣紧迫感用语                     │
-│  · 禁止夸大效果宣称                       │
-│  → 触发即自动拒绝                         │
-└──────────────────────────────────────────┘
-                    │
-┌───────────────────▼──────────────────────┐
-│           第 2 层: 软检查                  │
-│  · 品牌调性偏移检测                       │
-│  · 平台适配检查                           │
-│  · 与知识库的事实准确性                    │
-│  · 缺失信息检查                           │
-│  → 提醒 + 质量评分扣减                    │
-└──────────────────────────────────────────┘
-                    │
-┌───────────────────▼──────────────────────┐
-│           第 3 层: 人工审核                │
-│  · 所有输出标记为待审核                    │
-│  · 质检结果对审核者可见                    │
-│  · 通过 / 驳回 / 编辑 / 重新生成           │
-│  → 导出前的最终关卡                       │
-└──────────────────────────────────────────┘
+```js
+{
+  id,
+  platform,
+  goal,
+  product_category,
+  source,        // demo | manual | csv | api
+  metrics,
+  published_at
+}
 ```
 
-### 合规风险评估
+核心指标由 `ChannelProfile.goalMetrics[goal]` 决定。例如小红书 Consideration 使用收藏率，抖音 Awareness 使用播放量，微信公众号 Engagement 使用分享率。
 
-```
-compliance_risk = 100 - (
-    硬规则违规 * 20 +
-    软检查提醒 * 5 +
-    缺失信息 * 3
-)
-// 风险越低 = 分数越高
-// 95+ = 低风险
-// 80-94 = 中风险
-// <80 = 高风险（需要审核）
-```
+Winner 判定在“同品牌 + 同平台 + 相同 Goal”范围内完成。当前原型计算组内中位数和 Top 20% 位置，使用相对 Lift 而不是固定 `CTR > n%`。
 
----
+### Learning Layer
 
-## 数据库模式（生产环境）
-
-### PostgreSQL 表
-
-```sql
--- 知识记录
-CREATE TABLE knowledge_records (
-    id VARCHAR(50) PRIMARY KEY,
-    category VARCHAR(50) NOT NULL,
-    key VARCHAR(100) NOT NULL,
-    value TEXT NOT NULL,
-    source VARCHAR(200),
-    confidence DECIMAL(3,2) DEFAULT 0.85,
-    weight INTEGER DEFAULT 5,
-    tags TEXT[],
-    used_count INTEGER DEFAULT 0,
-    last_updated TIMESTAMP DEFAULT NOW(),
-    created_at TIMESTAMP DEFAULT NOW()
-);
-
--- 活动
-CREATE TABLE campaigns (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    product_name VARCHAR(200) NOT NULL,
-    raw_brief TEXT,
-    target_audience TEXT,
-    brand_tone VARCHAR(200),
-    target_platforms TEXT[],
-    campaign_goal TEXT,
-    status VARCHAR(20) DEFAULT 'draft',
-    created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW()
-);
-
--- 生成内容
-CREATE TABLE assets (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    campaign_id UUID REFERENCES campaigns(id),
-    platform VARCHAR(20) NOT NULL,
-    version INTEGER DEFAULT 1,
-    title TEXT,
-    body TEXT,
-    visual_prompt TEXT,
-    quality_score INTEGER,
-    review_status VARCHAR(20) DEFAULT 'pending',
-    created_at TIMESTAMP DEFAULT NOW()
-);
-
--- 活动时间线
-CREATE TABLE timeline_events (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    campaign_id UUID REFERENCES campaigns(id),
-    event_type VARCHAR(50) NOT NULL,
-    description TEXT,
-    metadata JSONB,
-    created_at TIMESTAMP DEFAULT NOW()
-);
-
--- 效果数据
-CREATE TABLE performance_data (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    campaign_id UUID REFERENCES campaigns(id),
-    platform VARCHAR(20) NOT NULL,
-    ctr DECIMAL(5,2),
-    engagement_rate DECIMAL(5,2),
-    conversion_rate DECIMAL(5,2),
-    brand_score INTEGER,
-    recorded_at TIMESTAMP DEFAULT NOW()
-);
+```text
+Published Content
+        ↓
+Performance
+        ↓
+Peer Baseline / Lift
+        ↓
+Winner Analysis
+        ↓
+Human confirms “加入创作经验”
+        ↓
+Experience Memory
+        ↓
+Relevant Experience Retrieval
+        ↓
+Next Generation
 ```
 
----
+所谓“持续学习”是 Experience Memory + Retrieval + In-context Learning，不是更新模型权重。
 
-## 可扩展性考量
+## 3. 状态与交互
 
-### 从原型到生产
+Campaign 只有三个业务状态：
 
-| 组件 | 原型 | 生产 |
-|------|------|------|
-| **数据存储** | localStorage + JSON | PostgreSQL + 向量库 |
-| **检索** | 关键词 + 权重评分 | 混合（关键词 + 嵌入向量） |
-| **生成** | 模板模拟 | OpenAI/Claude API |
-| **认证** | 无 | JWT + OAuth |
-| **状态** | 内存 JS 对象 | 数据库 + API |
-| **图片** | CSS 占位符 | SDXL/DALL-E API |
-| **导出** | 客户端 Blob 下载 | 服务端文件生成 |
-| **分析** | 模拟数据 | 真实平台 API 集成 |
+```text
+草稿（Draft） → 已定稿（Final） → 已发布（Published）
+```
 
-### 迁移策略
-1. 保持相同数据模型（记录模式）
-2. 将 localStorage 读取替换为 API 调用
-3. 将 JavaScript 检索替换为服务端向量搜索
-4. 在 API 端点前添加认证层
-5. 将模拟效果数据迁移至真实分析管道
+“生成与检查”只是页面内的工作流阶段，不会写入新的业务状态。产品没有审核负责人、独立审批页、通过/驳回或多级角色。
 
----
+每个平台独立维护轻量版本：
 
-## 安全考量（生产环境）
+- v1 AI 初稿；
+- v2 用户修改或 AI 重新生成；
+- v3 最终定稿。
 
-- **API 认证:** 所有端点使用 JWT/OAuth 保护
-- **数据隔离:** 数据库级别的多租户数据分离
-- **提示词注入防护:** 大模型调用前进行输入净化
-- **限流:** 按用户、按端点的速率限制
-- **内容审计追踪:** 所有生成记录包含用户 ID 和时间戳
-- **API 密钥管理:** 大模型 API 密钥存储在密钥库，绝不暴露给客户端
+用户修改和采纳检查建议都会产生版本；刷新后继续保留。
+
+## 4. localStorage
+
+| Key | 内容 |
+| --- | --- |
+| `zhiyuan_brand_memory` | 品牌资料、产品资料和用户导入事实 |
+| `zhiyuan_experience_memory` | 人工确认的创作经验 |
+| `zhiyuan_campaigns` | 当前 Campaign Brief、输出、状态与检查 |
+| `zhiyuan_performance` | 演示、手动或导入的发布表现 |
+| `zhiyuan_versions` | 各平台轻量版本记录 |
+
+旧版 `ai_mops_*` Key 会被识别并保存兼容备份，但不会直接合并到新版 Truth / Experience 层，避免旧模型中的混合数据和过期演示内容污染新工作台。迁移失败不会阻止页面启动。
+
+## 5. 数据来源
+
+生产方向支持：
+
+```text
+API Sync
+Account Sync
+CSV Import
+Manual Entry
+```
+
+Prototype 实际使用 `demo` 与 `manual`，CSV 用于本地导入。`api` 只是数据契约中的未来枚举，不代表当前已获得任何平台 API。
+
+## 6. 生产演进
+
+| 能力 | 当前 Prototype | 生产方向 |
+| --- | --- | --- |
+| 存储 | localStorage + JSON | PostgreSQL / 对象存储 |
+| 生成 | 平台模板模拟 | 服务端 LLM API + 结构化输出 |
+| 经验检索 | 关键词与字段加权 | 混合检索，可选 pgvector |
+| 质量检查 | 规则 + 模拟语义分类 | 规则引擎 + 模型判定 + 审计日志 |
+| 发布 | 人工发布后记录 | 视平台能力接入 API 或账号同步 |
+| 表现数据 | Demo / Manual / CSV | API / Account Sync / CSV / Manual |
+
+服务端实现时，应保持七层边界不变：事实层不接受表现洞察，Experience 必须保留来源与基线，Performance 保留原始数据来源，生成只接收经过授权的上下文。
+
+## 7. 安全与可靠性
+
+- 用户导入与编辑内容在进入 HTML 前统一转义；
+- 不在前端保存 API 密钥；
+- 不自动构造缺失 Performance；
+- 食品事实缺失时显示“待补充”，不做功效推断；
+- 用户忽略检查项时保留 `ignored` 状态与时间；
+- 生产版本需增加认证、租户隔离、审计日志、速率限制和服务端输入验证。

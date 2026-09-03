@@ -1,0 +1,34 @@
+[
+  {
+    "id": "exp-xhs-scene-001",
+    "platform": "xiaohongshu",
+    "product_category": "豆腐花 / 中式甜品",
+    "campaign_goal": "consideration",
+    "content_pattern": "地域文化 + 明确食用场景",
+    "insight": "在豆腐花种草内容中，用地域身份切入，再快速落到冰镇与分享场景，收藏表现更好。",
+    "source_content_id": "seed-xhs-scene",
+    "source_campaign": "夏日冰豆腐花经验样本",
+    "metric_name": "collect_rate",
+    "metric_value": 6.8,
+    "baseline_value": 4.7,
+    "lift": 45,
+    "learned_at": "2026-08-30",
+    "data_notice": "演示数据"
+  },
+  {
+    "id": "exp-dy-product-001",
+    "platform": "douyin",
+    "product_category": "豆制品 / 豆腐",
+    "campaign_goal": "awareness",
+    "content_pattern": "成品画面前置 + 单一卖点",
+    "insight": "视频前 3 秒先展示成品和产品，再用一个家常场景解释卖点，更有利于播放完成。",
+    "source_content_id": "seed-dy-product",
+    "source_campaign": "家常豆腐经验样本",
+    "metric_name": "plays",
+    "metric_value": 87000,
+    "baseline_value": 70000,
+    "lift": 24,
+    "learned_at": "2026-08-27",
+    "data_notice": "演示数据"
+  }
+]

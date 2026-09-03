@@ -1,0 +1,70 @@
+{
+  "meta": {
+    "name": "食品品牌演示资料",
+    "data_notice": "演示数据，不代表企业真实经营资料",
+    "updated": "2026-09-04"
+  },
+  "brand": {
+    "intro": "润心食品是一家以豆制品与中式甜品为核心业务的食品品牌演示案例。",
+    "positioning": "提供适合日常家庭与轻松分享场景的豆制品和中式甜品。",
+    "voice": "自然、亲切、生活化；用具体食用场景表达产品价值，避免生硬销售话术。",
+    "audience": "关注日常饮食体验、家庭分享和地方风味的消费者。",
+    "values": "尊重产品事实、重视地方饮食文化、让传统风味自然进入现代生活。",
+    "forbidden": "禁止医疗、营养功效、减肥、养生、绝对化排名及无法由资料支持的食品宣传表述。",
+    "source": "演示资料"
+  },
+  "products": [
+    {
+      "id": "product-red-bean-tofu-pudding",
+      "name": "客家婆红豆冰糖豆腐花",
+      "category": "豆腐花 / 中式甜品",
+      "description": "红豆与冰糖风味的即食豆腐花演示产品。",
+      "sellingPoints": ["红豆与冰糖风味", "豆腐花口感细腻", "冷藏后食用更适合夏季场景"],
+      "specification": "待补充",
+      "serving": "开盖即食；可冷藏后食用",
+      "scenarios": ["早餐", "下午茶", "夏季消暑场景", "家庭分享"],
+      "usableFacts": ["红豆冰糖风味", "豆腐花", "可冷藏后食用", "适合早餐与下午茶场景"],
+      "forbiddenInference": ["高营养", "减肥", "养生", "治疗或改善身体问题", "零添加"],
+      "source": "演示数据"
+    },
+    {
+      "id": "product-mountain-tofu-pudding",
+      "name": "山水豆腐花",
+      "category": "豆腐花 / 中式甜品",
+      "description": "突出豆香与细腻口感的豆腐花演示产品。",
+      "sellingPoints": ["细腻口感", "自然豆香", "开盖即食"],
+      "specification": "待补充",
+      "serving": "开盖即食；按个人喜好冷藏后食用",
+      "scenarios": ["早餐", "下午茶", "家庭分享"],
+      "usableFacts": ["豆腐花", "细腻口感", "开盖即食"],
+      "forbiddenInference": ["蛋白含量", "保健功效", "低糖", "无防腐剂"],
+      "source": "演示数据"
+    },
+    {
+      "id": "product-mountain-tofu",
+      "name": "山水豆腐",
+      "category": "豆制品 / 豆腐",
+      "description": "适合家庭日常烹饪的豆腐演示产品。",
+      "sellingPoints": ["适合多种家常做法", "豆香自然", "方便搭配日常菜式"],
+      "specification": "待补充",
+      "serving": "建议充分加热后，按菜谱烹饪",
+      "scenarios": ["家庭正餐", "家常烹饪", "朋友聚餐"],
+      "usableFacts": ["豆腐", "适合家常烹饪", "可搭配多种菜式"],
+      "forbiddenInference": ["补钙", "高蛋白", "减脂", "适合特定疾病人群"],
+      "source": "演示数据"
+    },
+    {
+      "id": "product-mountain-yuba",
+      "name": "山水腐竹",
+      "category": "豆制品 / 腐竹",
+      "description": "用于家常烹饪与火锅场景的腐竹演示产品。",
+      "sellingPoints": ["豆香风味", "适合焖煮与火锅", "便于家庭常备"],
+      "specification": "待补充",
+      "serving": "按包装说明泡发后充分烹饪",
+      "scenarios": ["家庭正餐", "火锅", "焖煮菜式"],
+      "usableFacts": ["腐竹", "适合焖煮与火锅", "食用前需按说明处理"],
+      "forbiddenInference": ["高蛋白", "健身食品", "减脂", "养生功效"],
+      "source": "演示数据"
+    }
+  ]
+}
