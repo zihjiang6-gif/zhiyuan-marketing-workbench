@@ -18,6 +18,9 @@
     conversion: '转化 / Conversion'
   };
 
+  const EXPLORATION_RATE = 0.2;
+  const MIN_BASELINE_PEERS = 3;
+
   const CHANNEL_PROFILES = {
     xiaohongshu: {
       id: 'xiaohongshu', name: '小红书', shortName: '小红书', contentType: '图文笔记', role: '种草 · 搜索承接', color: '#e9475f',
@@ -52,9 +55,9 @@
   };
 
   const CHANNEL_ADAPTERS = {
-    xiaohongshu:generateXiaohongshuContent,
-    douyin:generateDouyinContent,
-    wechat:generateWechatContent
+    xiaohongshu: generateXiaohongshuContent,
+    douyin: generateDouyinContent,
+    wechat: generateWechatContent
   };
 
   const DEFAULT_BRAND_MEMORY = {
@@ -153,7 +156,8 @@
     } catch (_) { return clone(fallback); }
   }
   function saveJSON(key, value) {
-    try { localStorage.setItem(key, JSON.stringify(value)); } catch (_) { toast('本地存储不可用，本次修改仅在当前页面保留'); }
+    try { localStorage.setItem(key, JSON.stringify(value)); }
+    catch (_) { toast('本地存储不可用，本次修改仅在当前页面保留'); }
   }
   function escapeHTML(value) {
     return String(value ?? '').replace(/[&<>"']/g, char => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[char]));
@@ -189,7 +193,6 @@
 
   function migrateLegacyStorage() {
     if (localStorage.getItem(STORAGE.migrated)) return;
-    // 旧版本数据模型与新版 Truth / Experience 分层不兼容，仅做安全识别，不把旧演示内容带入新界面。
     ['ai_mops_kb', 'ai_mops_campaign_draft', 'ai_mops_campaigns', 'ai_mops_last_import'].forEach(key => {
       try { if (localStorage.getItem(key)) localStorage.setItem(`${key}_legacy_backup`, localStorage.getItem(key)); } catch (_) {}
     });
@@ -199,33 +202,16 @@
   function getProduct(productId = campaign.productId) {
     return brandMemory.products.find(product => product.id === productId) || brandMemory.products[0];
   }
-
   function persistCampaign() {
     campaign.updatedAt = new Date().toISOString();
     saveJSON(STORAGE.campaign, campaign);
     saveJSON(STORAGE.versions, versions);
   }
 
-  function init() {
-    migrateLegacyStorage();
-    normalizeLoadedState();
-    bindEvents();
-    renderProductOptions();
-    renderChannelOptions();
-    hydrateBriefForm();
-    routeFromHash();
-    renderCampaignState();
-    renderGeneration();
-    renderMemory();
-    renderPerformance();
-    updateMemoryCounts();
-  }
-
   function normalizeLoadedState() {
     if (!brandMemory || typeof brandMemory !== 'object') brandMemory = clone(DEFAULT_BRAND_MEMORY);
     brandMemory = {
-      ...clone(DEFAULT_BRAND_MEMORY),
-      ...brandMemory,
+      ...clone(DEFAULT_BRAND_MEMORY), ...brandMemory,
       brand:{ ...clone(DEFAULT_BRAND_MEMORY.brand), ...(brandMemory.brand || {}) },
       products:Array.isArray(brandMemory.products) && brandMemory.products.length ? brandMemory.products : clone(DEFAULT_BRAND_MEMORY.products),
       customFacts:Array.isArray(brandMemory.customFacts) ? brandMemory.customFacts : []
@@ -250,12 +236,14 @@
     campaign.channels = (Array.isArray(campaign.channels) ? campaign.channels : []).filter(id => CHANNEL_PROFILES[id]);
     if (!campaign.channels.length) campaign.channels = ['xiaohongshu', 'douyin'];
     if (Object.keys(campaign.outputs).length && campaign.channels.some(channel => !campaign.outputs[channel])) {
-      campaign.outputs = {};
-      campaign.references = null;
-      campaign.qa = { checks:[], issues:[] };
-      campaign.status = 'draft';
+      campaign.outputs = {}; campaign.references = null; campaign.qa = { checks:[], issues:[] }; campaign.status = 'draft';
     }
     if (!CHANNEL_PROFILES[activePlatform] || !campaign.channels.includes(activePlatform)) activePlatform = campaign.channels[0];
+  }
+
+  function init() {
+    migrateLegacyStorage(); normalizeLoadedState(); bindEvents(); renderProductOptions(); renderChannelOptions(); hydrateBriefForm(); routeFromHash();
+    renderCampaignState(); renderGeneration(); renderMemory(); renderPerformance(); updateMemoryCounts();
   }
 
   function bindEvents() {
@@ -264,10 +252,7 @@
     document.getElementById('mobileMenuButton').addEventListener('click', toggleMobileMenu);
     document.getElementById('briefForm').addEventListener('submit', handleGenerate);
     document.getElementById('loadDemoButton').addEventListener('click', restoreDemoBrief);
-    document.getElementById('briefInput').addEventListener('input', event => {
-      document.getElementById('briefCharCount').textContent = event.target.value.length;
-      saveBriefDraft();
-    });
+    document.getElementById('briefInput').addEventListener('input', event => { document.getElementById('briefCharCount').textContent = event.target.value.length; saveBriefDraft(); });
     ['productInput','taskInput','goalInput'].forEach(id => document.getElementById(id).addEventListener('change', saveBriefDraft));
     document.getElementById('audienceInput').addEventListener('input', saveBriefDraft);
     document.getElementById('toggleReferencesButton').addEventListener('click', toggleReferences);
@@ -278,16 +263,12 @@
     document.getElementById('performanceForm').addEventListener('submit', savePerformanceEntry);
     document.getElementById('savePerformanceButton').addEventListener('click', savePerformanceEntry);
     document.getElementById('performanceCsvFile').addEventListener('change', importPerformanceCSV);
-    document.querySelectorAll('[data-memory-tab]').forEach(button => button.addEventListener('click', () => {
-      activeMemoryTab = button.dataset.memoryTab; renderMemory();
-    }));
+    document.querySelectorAll('[data-memory-tab]').forEach(button => button.addEventListener('click', () => { activeMemoryTab = button.dataset.memoryTab; renderMemory(); }));
     document.getElementById('addMaterialButton').addEventListener('click', prepareMaterialModal);
     document.querySelectorAll('[data-close-dialog]').forEach(button => button.addEventListener('click', () => closeDialog(button.dataset.closeDialog)));
     document.getElementById('learnExperienceButton').addEventListener('click', learnSelectedWinner);
     document.querySelectorAll('[data-import-tab]').forEach(button => button.addEventListener('click', () => switchImportTab(button.dataset.importTab)));
-    document.getElementById('materialFile').addEventListener('change', event => {
-      document.getElementById('materialFileName').textContent = event.target.files[0]?.name || '尚未选择文件';
-    });
+    document.getElementById('materialFile').addEventListener('change', event => { document.getElementById('materialFileName').textContent = event.target.files[0]?.name || '尚未选择文件'; });
     document.getElementById('saveMaterialButton').addEventListener('click', saveMaterial);
     document.querySelectorAll('dialog').forEach(dialog => dialog.addEventListener('close', syncModalBackdrop));
     document.addEventListener('keydown', event => { if (event.key === 'Escape') document.getElementById('sidebar').classList.remove('is-open'); });
@@ -295,8 +276,7 @@
 
   function navigate(route) {
     if (!['create','memory','performance'].includes(route)) route = 'create';
-    if (location.hash !== `#${route}`) location.hash = route;
-    else showRoute(route);
+    if (location.hash !== `#${route}`) location.hash = route; else showRoute(route);
   }
   function routeFromHash() { showRoute(location.hash.replace('#','') || 'create'); }
   function showRoute(route) {
@@ -307,7 +287,7 @@
     document.getElementById('mobileMenuButton').setAttribute('aria-expanded','false');
     if (activeRoute === 'memory') renderMemory();
     if (activeRoute === 'performance') renderPerformance();
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top:0, behavior:'smooth' });
   }
   function toggleMobileMenu() {
     const sidebar = document.getElementById('sidebar');
@@ -320,11 +300,8 @@
   }
   function renderChannelOptions() {
     document.getElementById('channelOptions').innerHTML = Object.values(CHANNEL_PROFILES).map(profile => `
-      <label class="channel-option">
-        <input type="checkbox" value="${profile.id}" ${campaign.channels.includes(profile.id) ? 'checked' : ''}>
-        <span class="channel-logo" style="color:${profile.color}">${escapeHTML(profile.shortName.slice(0,1))}</span>
-        <span><strong>${escapeHTML(profile.name)}</strong><small>${escapeHTML(profile.role)}</small></span>
-      </label>`).join('');
+      <label class="channel-option"><input type="checkbox" value="${profile.id}" ${campaign.channels.includes(profile.id) ? 'checked' : ''}>
+      <span class="channel-logo" style="color:${profile.color}">${escapeHTML(profile.shortName.slice(0,1))}</span><span><strong>${escapeHTML(profile.name)}</strong><small>${escapeHTML(profile.role)}</small></span></label>`).join('');
     document.querySelectorAll('#channelOptions input').forEach(input => input.addEventListener('change', saveBriefDraft));
   }
   function hydrateBriefForm() {
@@ -337,12 +314,12 @@
   }
   function readBriefForm() {
     return {
-      productId: document.getElementById('productInput').value,
-      task: document.getElementById('taskInput').value,
-      brief: document.getElementById('briefInput').value.trim(),
-      audience: document.getElementById('audienceInput').value.trim(),
-      goal: document.getElementById('goalInput').value,
-      channels: [...document.querySelectorAll('#channelOptions input:checked')].map(input => input.value)
+      productId:document.getElementById('productInput').value,
+      task:document.getElementById('taskInput').value,
+      brief:document.getElementById('briefInput').value.trim(),
+      audience:document.getElementById('audienceInput').value.trim(),
+      goal:document.getElementById('goalInput').value,
+      channels:[...document.querySelectorAll('#channelOptions input:checked')].map(input => input.value)
     };
   }
   function saveBriefDraft() {
@@ -350,24 +327,15 @@
     const before = JSON.stringify([campaign.productId,campaign.task,campaign.brief,campaign.audience,campaign.goal,campaign.channels]);
     const after = JSON.stringify([draft.productId,draft.task,draft.brief,draft.audience,draft.goal,draft.channels]);
     if (before !== after && Object.keys(campaign.outputs || {}).length) {
-      campaign.outputs = {};
-      campaign.references = null;
-      campaign.qa = { checks:[], issues:[] };
-      campaign.status = 'draft';
-      versions = {};
-      renderCampaignState();
-      renderGeneration();
+      campaign.outputs = {}; campaign.references = null; campaign.qa = { checks:[], issues:[] }; campaign.status = 'draft'; versions = {};
+      renderCampaignState(); renderGeneration();
     }
-    Object.assign(campaign, draft);
-    persistCampaign();
-    document.getElementById('briefCharCount').textContent = draft.brief.length;
+    Object.assign(campaign, draft); persistCampaign(); document.getElementById('briefCharCount').textContent = draft.brief.length;
   }
   function restoreDemoBrief() {
-    const preserved = { id: campaign.id, outputs: {}, references: null, qa:{checks:[],issues:[]} };
-    campaign = { ...clone(DEFAULT_CAMPAIGN), ...preserved };
-    activePlatform = campaign.channels[0];
-    renderProductOptions(); renderChannelOptions(); hydrateBriefForm(); renderCampaignState(); renderGeneration(); persistCampaign();
-    toast('已恢复演示 Brief');
+    const preserved = { id:campaign.id, outputs:{}, references:null, qa:{checks:[],issues:[]} };
+    campaign = { ...clone(DEFAULT_CAMPAIGN), ...preserved }; activePlatform = campaign.channels[0];
+    renderProductOptions(); renderChannelOptions(); hydrateBriefForm(); renderCampaignState(); renderGeneration(); persistCampaign(); toast('已恢复演示 Brief');
   }
 
   function handleGenerate(event) {
@@ -378,29 +346,19 @@
     Object.assign(campaign, brief);
     const product = getProduct(brief.productId);
     const relevantExperiences = retrieveExperiences(brief, product);
-    const exploration = Math.random() < 0.2;
-    const usedExperiences = exploration ? relevantExperiences.slice(0, Math.max(1, Math.min(2, relevantExperiences.length))) : relevantExperiences.slice(0, 3);
+    const exploration = Math.random() < EXPLORATION_RATE;
+    const usedExperiences = exploration ? [] : relevantExperiences.slice(0, 3);
 
     campaign.outputs = {};
     campaign.channels.forEach(channel => {
       campaign.outputs[channel] = generateChannelContent(channel, brief, product, usedExperiences, exploration);
-      versions[channel] = [];
-      addVersion(channel, 'AI 初稿');
+      versions[channel] = []; addVersion(channel, exploration ? 'AI 初稿 · 探索' : 'AI 初稿');
     });
-    campaign.references = {
-      productId: product.id,
-      channels: [...campaign.channels],
-      experienceIds: usedExperiences.map(item => item.id),
-      exploration,
-      generatedAt: new Date().toISOString()
-    };
-    campaign.qa = runQualityChecks(campaign.outputs, product);
-    campaign.status = 'draft';
-    activePlatform = campaign.channels[0];
-    persistCampaign();
-    renderCampaignState(); renderGeneration();
-    document.getElementById('generationArea').scrollIntoView({ behavior:'smooth', block:'start' });
-    toast(usedExperiences.length ? `内容已生成，并参考 ${usedExperiences.length} 条相关创作经验` : '内容已生成，发布前检查已完成');
+    campaign.references = { productId:product.id, channels:[...campaign.channels], experienceIds:usedExperiences.map(item => item.id), exploration, generatedAt:new Date().toISOString() };
+    campaign.qa = runQualityChecks(campaign.outputs, product); campaign.status = 'draft'; activePlatform = campaign.channels[0]; persistCampaign();
+    renderCampaignState(); renderGeneration(); document.getElementById('generationArea').scrollIntoView({ behavior:'smooth', block:'start' });
+    if (exploration) toast('内容已生成：本轮为探索模式，不引用历史创作经验');
+    else toast(usedExperiences.length ? `内容已生成，并参考 ${usedExperiences.length} 条相关创作经验` : '内容已生成，发布前检查已完成');
   }
 
   function retrieveExperiences(brief, product) {
@@ -412,24 +370,19 @@
       const categoryMatch = item.product_category === product.category || (product.category !== '待补充' && item.product_category?.includes(product.category.split(' / ')[0]));
       const goalMatch = item.campaign_goal === brief.goal;
       if (platformMatch) score += 8;
-      if (item.product_category === product.category) score += 6;
-      else if (categoryMatch) score += 3;
+      if (item.product_category === product.category) score += 6; else if (categoryMatch) score += 3;
       if (goalMatch) score += 5;
       const haystack = `${item.content_pattern} ${item.insight} ${item.source_campaign}`.toLowerCase();
-      const topicMatches = tokens.filter(token => haystack.includes(token)).length;
-      score += topicMatches;
-      return { ...item, relevance: score, platformMatch, categoryMatch, goalMatch, topicMatches };
+      const topicMatches = tokens.filter(token => haystack.includes(token)).length; score += topicMatches;
+      return { ...item, relevance:score, platformMatch, categoryMatch, goalMatch, topicMatches };
     }).filter(item => item.platformMatch && item.categoryMatch && (item.goalMatch || item.topicMatches > 0)).sort((a,b) => b.relevance - a.relevance || b.lift - a.lift);
   }
+  function experienceHint(experiences, channel) { return experiences.find(item => item.platform === channel)?.content_pattern || ''; }
 
-  function experienceHint(experiences, channel) {
-    const match = experiences.find(item => item.platform === channel);
-    return match?.content_pattern || '';
-  }
   function buildCampaignContext(brief, product) {
     const briefText = String(brief.brief || '').replace(/\s+/g, ' ').trim();
     const focusClauses = briefText.split(/[，,。；;]/).map(item => item.trim()).filter(item => item && !/^(希望|不要|避免|请勿|不能)/.test(item)).map(item => item.replace(/^围绕/, '').replace(/^突出/, '').replace(/推广/g, '').trim()).filter(Boolean);
-    const focus = (focusClauses.slice(0, 3).join('、') || `围绕${product.name}展开内容`).slice(0, 56);
+    const focus = (focusClauses.slice(0,3).join('、') || `围绕${product.name}展开内容`).slice(0,56);
     const audience = String(brief.audience || brandMemory.brand.audience || '日常消费者').trim();
     const productScenes = (product.scenarios || []).filter(scene => scene && scene !== '待补充');
     const sceneKeywords = ['早餐','下午茶','夏季','消暑','家庭','分享','正餐','烹饪','聚餐','火锅','焖煮'];
@@ -440,28 +393,22 @@
     }).sort((a,b) => a.index - b.index);
     const primaryScene = rankedScenes[0]?.index < Number.POSITIVE_INFINITY ? rankedScenes[0].scene : productScenes[0] || '日常饮食';
     const taskPrefix = brief.task && brief.task !== '产品推广' ? `${brief.task}｜` : '';
-    const audienceLabel = audience.split(/[、，,]/)[0].slice(0, 12);
+    const audienceLabel = audience.split(/[、，,]/)[0].slice(0,12);
     const goalCTA = {
-      awareness: `如果这个场景也让你觉得熟悉，可以先记住 ${product.name}。`,
-      engagement: `你会把 ${product.name} 放进哪个日常场景？欢迎分享自己的安排。`,
-      consideration: `如果你也在找${primaryScene}的实用安排，可以先收藏，按需要再回来看看。`,
-      traffic: '想继续了解，可以从品牌已公开的产品资料与实际渠道开始。',
-      conversion: '如果它正好符合你的日常需要，可以通过实际购买渠道进一步了解。'
+      awareness:`如果这个场景也让你觉得熟悉，可以先记住 ${product.name}。`,
+      engagement:`你会把 ${product.name} 放进哪个日常场景？欢迎分享自己的安排。`,
+      consideration:`如果你也在找${primaryScene}的实用安排，可以先收藏，按需要再回来看看。`,
+      traffic:'想继续了解，可以从品牌已公开的产品资料与实际渠道开始。',
+      conversion:'如果它正好符合你的日常需要，可以通过实际购买渠道进一步了解。'
     };
     return { focus, audience, audienceLabel, primaryScene, taskPrefix, cta:goalCTA[brief.goal] || goalCTA.consideration };
   }
 
   function buildExperienceCue(hint, product, context) {
     if (!hint) return { lead:'', videoHook:'', videoOpening:'' };
-    if (/(地域|地方|客家|家乡)/.test(hint)) {
-      return { lead:`先从${context.audienceLabel}熟悉的${context.primaryScene}记忆说起。`, videoHook:`“${context.audienceLabel}熟悉的这一口，放进${context.primaryScene}是什么感觉？”`, videoOpening:`先给出带有地方生活感的${product.name}成品近景` };
-    }
-    if (/(成品|画面前置|近景|视觉)/.test(hint)) {
-      return { lead:`先把 ${product.name} 的成品与真实使用场景放到前面。`, videoHook:`“先看成品：${product.name}放进${context.primaryScene}可以怎么安排？”`, videoOpening:`${product.name}成品特写先于说明出现` };
-    }
-    if (/(方法|步骤|提醒|问题)/.test(hint)) {
-      return { lead:`先回答${context.primaryScene}里一个具体、可执行的问题。`, videoHook:`“${context.primaryScene}怎么做更顺手？先看这一步。”`, videoOpening:`先展示用户最关心的操作结果` };
-    }
+    if (/(地域|地方|客家|家乡)/.test(hint)) return { lead:`先从${context.audienceLabel}熟悉的${context.primaryScene}记忆说起。`, videoHook:`“${context.audienceLabel}熟悉的这一口，放进${context.primaryScene}是什么感觉？”`, videoOpening:`先给出带有地方生活感的${product.name}成品近景` };
+    if (/(成品|画面前置|近景|视觉)/.test(hint)) return { lead:`先把 ${product.name} 的成品与真实使用场景放到前面。`, videoHook:`“先看成品：${product.name}放进${context.primaryScene}可以怎么安排？”`, videoOpening:`${product.name}成品特写先于说明出现` };
+    if (/(方法|步骤|提醒|问题)/.test(hint)) return { lead:`先回答${context.primaryScene}里一个具体、可执行的问题。`, videoHook:`“${context.primaryScene}怎么做更顺手？先看这一步。”`, videoOpening:'先展示用户最关心的操作结果' };
     return { lead:`先用${context.primaryScene}建立熟悉感，再自然带出 ${product.name}。`, videoHook:`“从${context.primaryScene}开始，看看 ${product.name} 的日常用法。”`, videoOpening:`${context.primaryScene}画面先出现，再带出产品` };
   }
 
@@ -469,7 +416,7 @@
     const profile = CHANNEL_PROFILES[channel];
     if (!profile) throw new Error(`未找到平台 Profile：${channel}`);
     const productScenes = (product.scenarios || []).filter(item => item && item !== '待补充');
-    const scene = productScenes.slice(0, 3).join('、') || '日常饮食';
+    const scene = productScenes.slice(0,3).join('、') || '日常饮食';
     const context = buildCampaignContext(brief, product);
     const usableFacts = (product.usableFacts || []).filter(item => item && item !== '待补充');
     const sellingPoints = (product.sellingPoints || []).filter(item => item && item !== '待补充');
@@ -480,7 +427,7 @@
     const isRedBeanPudding = product.id === 'product-red-bean-tofu-pudding';
     const hint = experienceHint(experiences, channel);
     const experienceCue = buildExperienceCue(hint, product, context);
-    const freshAngle = exploring ? '这次同时保留一个新的轻量表达角度，避免只复刻过去内容。' : '';
+    const freshAngle = exploring ? '探索模式：本轮仅使用品牌、产品与平台规则，不引用历史创作经验。' : '';
     const input = { profile, product, productScenes, scene, context, usableFacts, heroFact, secondFact, serving, topicCategory, isRedBeanPudding, hint, experienceCue, freshAngle };
     return (CHANNEL_ADAPTERS[channel] || generateProfileFallback)(input);
   }
@@ -493,11 +440,9 @@
       body:`${experienceCue.lead ? `${experienceCue.lead}\n\n` : ''}这次想和${context.audience}分享的重点是：${context.focus}。\n\n最近在安排${primaryScene}时，又想起了 ${product.name}。${heroFact}和${secondFact}，是产品资料里已经确认、也最值得说清楚的特点。${product.category.includes('豆腐花') ? '🍧' : '🥢'}\n\n我更喜欢把它放进具体的一餐里：${scene}都可以自然出现。${serving}，照着已经确认的方式准备就好。\n\n没有复杂搭配，也不用把它说得多厉害。对我来说，它的价值就是让${primaryScene}多一个简单、好执行的选择，也方便和家人一起分享。\n\n${context.cta}`,
       hashtags:[...new Set([topicCategory, primaryScene, '家庭分享', '日常饮食', isRedBeanPudding ? '客家风味' : product.name])].slice(0,5),
       visualSuggestion:`自然光下的${product.name}成品近景；带出${heroFact}与${primaryScene}环境，保留家庭餐桌局部，避免过度棚拍感。`,
-      appliedExperience:hint || null,
-      strategyNote:freshAngle
+      appliedExperience:hint || null, strategyNote:freshAngle
     };
   }
-
   function generateDouyinContent(input) {
     const { product, productScenes, context, heroFact, serving, topicCategory, isRedBeanPudding, hint, experienceCue, freshAngle } = input;
     const primaryScene = context.primaryScene;
@@ -507,52 +452,79 @@
       caption:`面向${context.audience}，用 ${product.name} 回应“${context.focus}”。重点说清楚${heroFact}和实际准备方式，一条视频只讲一个卖点。`,
       hashtags:[...new Set([topicCategory, primaryScene, '家常美食', '日常饮食'])],
       shootingSuggestion:`竖屏 9:16；前 3 秒直接给${product.name}成品特写；自然光、快切，产品在第 5 秒前出现。`,
-      appliedExperience:hint || null,
-      strategyNote:freshAngle
+      appliedExperience:hint || null, strategyNote:freshAngle
     };
   }
-
   function generateWechatContent(input) {
     const { product, scene, context, usableFacts, heroFact, serving, hint, experienceCue, freshAngle } = input;
     const primaryScene = context.primaryScene;
     return {
-      title: `${context.taskPrefix}${product.name}：让${primaryScene}的分享简单一点`,
-      summary: `面向${context.audience}，围绕“${context.focus}”说明 ${product.name} 已确认的产品事实、准备方式，以及它在${scene}中的日常位置。`,
-      outline: `一、${primaryScene}里熟悉的一口\n二、${heroFact}与实际准备方式\n三、从一个人的一餐到一家人的分享\n四、把简单风味留在日常`,
-      body: `${experienceCue.lead ? `${experienceCue.lead}\n\n` : ''}这次内容的重点，是“${context.focus}”。对${context.audience}来说，${primaryScene}的味觉记忆，往往不是一道复杂的大菜，而是一份容易准备、可以安心说清楚的日常食品。${product.name}可以出现在${scene}，关键不是为它增加夸张意义，而是把真实的使用方式讲明白。\n\n产品资料里最明确的信息，是${usableFacts.join('、') || heroFact}。我们不为它添加资料之外的营养或功效想象，只把注意力放回已经确认的产品特点和真实食用体验。\n\n实际准备时，可以按照“${serving}”来处理。一个人用餐不需要准备太多，和家人分享时也自然。${scene}，都是它可以出现的具体场景。\n\n熟悉的风味进入今天的生活，不一定需要宏大的讲述。有时只是忙完一天以后，坐下来完成一顿简单的饭；或是在周末，把这一份递给身边的人。产品的意义，也正是在这些具体的小场景里被感受到。\n\n关于食品，我们更愿意保持克制：说清楚已经确认的产品事实，也尊重每个人不同的口味偏好。真正值得留下的，不是夸张承诺，而是一次简单、可信、容易复现的分享。`,
-      cta: context.cta,
-      coverSuggestion: `横版封面：${product.name}成品置于浅色家庭餐桌，呈现${heroFact}，标题留白清楚、色彩克制。`,
-      appliedExperience: hint || null,
-      strategyNote: freshAngle
+      title:`${context.taskPrefix}${product.name}：让${primaryScene}的分享简单一点`,
+      summary:`面向${context.audience}，围绕“${context.focus}”说明 ${product.name} 已确认的产品事实、准备方式，以及它在${scene}中的日常位置。`,
+      outline:`一、${primaryScene}里熟悉的一口\n二、${heroFact}与实际准备方式\n三、从一个人的一餐到一家人的分享\n四、把简单风味留在日常`,
+      body:`${experienceCue.lead ? `${experienceCue.lead}\n\n` : ''}这次内容的重点，是“${context.focus}”。对${context.audience}来说，${primaryScene}的味觉记忆，往往不是一道复杂的大菜，而是一份容易准备、可以安心说清楚的日常食品。${product.name}可以出现在${scene}，关键不是为它增加夸张意义，而是把真实的使用方式讲明白。\n\n产品资料里最明确的信息，是${usableFacts.join('、') || heroFact}。我们不为它添加资料之外的营养或功效想象，只把注意力放回已经确认的产品特点和真实食用体验。\n\n实际准备时，可以按照“${serving}”来处理。一个人用餐不需要准备太多，和家人分享时也自然。${scene}，都是它可以出现的具体场景。\n\n熟悉的风味进入今天的生活，不一定需要宏大的讲述。有时只是忙完一天以后，坐下来完成一顿简单的饭；或是在周末，把这一份递给身边的人。产品的意义，也正是在这些具体的小场景里被感受到。\n\n关于食品，我们更愿意保持克制：说清楚已经确认的产品事实，也尊重每个人不同的口味偏好。真正值得留下的，不是夸张承诺，而是一次简单、可信、容易复现的分享。`,
+      cta:context.cta,
+      coverSuggestion:`横版封面：${product.name}成品置于浅色家庭餐桌，呈现${heroFact}，标题留白清楚、色彩克制。`,
+      appliedExperience:hint || null, strategyNote:freshAngle
     };
   }
-
   function generateProfileFallback(input) {
     const { profile, product, context, heroFact, serving, topicCategory, hint, experienceCue, freshAngle } = input;
     const values = {
-      title:`${context.taskPrefix}${product.name}｜${context.primaryScene}`,
-      hook:`${context.primaryScene}如何安排？从 ${product.name} 开始。`,
-      summary:`面向${context.audience}，围绕“${context.focus}”说明${heroFact}。`,
-      body:`${experienceCue.lead ? `${experienceCue.lead} ` : ''}${context.focus}。${product.name}已经确认的产品信息包括${heroFact}。${serving}。${context.cta}`,
-      script:`开场呈现 ${product.name}，围绕${context.primaryScene}说明${heroFact}，结尾使用简洁行动建议。`,
-      outline:`场景 → 产品事实 → 使用方式 → CTA`,
-      caption:`${product.name}与${context.primaryScene}的日常内容。`,
-      cta:context.cta,
-      hashtags:[topicCategory, context.primaryScene, '日常饮食'],
-      visualSuggestion:`围绕${product.name}与${context.primaryScene}呈现自然、真实的画面。`,
-      shootingSuggestion:`优先呈现产品、${context.primaryScene}与真实使用动作。`,
-      coverSuggestion:`使用${product.name}成品与${context.primaryScene}作为封面主体。`
+      title:`${context.taskPrefix}${product.name}｜${context.primaryScene}`, hook:`${context.primaryScene}如何安排？从 ${product.name} 开始。`,
+      summary:`面向${context.audience}，围绕“${context.focus}”说明${heroFact}。`, body:`${experienceCue.lead ? `${experienceCue.lead} ` : ''}${context.focus}。${product.name}已经确认的产品信息包括${heroFact}。${serving}。${context.cta}`,
+      script:`开场呈现 ${product.name}，围绕${context.primaryScene}说明${heroFact}，结尾使用简洁行动建议。`, outline:'场景 → 产品事实 → 使用方式 → CTA',
+      caption:`${product.name}与${context.primaryScene}的日常内容。`, cta:context.cta, hashtags:[topicCategory, context.primaryScene, '日常饮食'],
+      visualSuggestion:`围绕${product.name}与${context.primaryScene}呈现自然、真实的画面。`, shootingSuggestion:`优先呈现产品、${context.primaryScene}与真实使用动作。`, coverSuggestion:`使用${product.name}成品与${context.primaryScene}作为封面主体。`
     };
-    const output = {};
-    profile.outputFields.forEach(field => { output[field.key] = values[field.key] ?? `${field.label}待补充`; });
-    output.appliedExperience = hint || null;
-    output.strategyNote = freshAngle;
-    return output;
+    const output = {}; profile.outputFields.forEach(field => { output[field.key] = values[field.key] ?? `${field.label}待补充`; });
+    output.appliedExperience = hint || null; output.strategyNote = freshAngle; return output;
   }
 
   function flattenOutput(output) {
     return Object.entries(output).filter(([key]) => !['appliedExperience','strategyNote'].includes(key)).map(([,value]) => Array.isArray(value) ? value.join(' ') : value).join('\n');
   }
+
+  function buildEvidencePool(product) {
+    const values = [
+      ...(product.usableFacts || []), ...(product.sellingPoints || []), product.description,
+      product.specification && product.specification !== '待补充' ? product.specification : '',
+      product.serving && product.serving !== '待补充' ? product.serving : '', ...(product.scenarios || [])
+    ];
+    return [...new Set(values.map(value => String(value || '').trim()).filter(value => value && value !== '待补充'))];
+  }
+  function findSupportingEvidence(sentence, evidencePool) {
+    const compactSentence = String(sentence).replace(/\s/g,'').toLowerCase();
+    return evidencePool.find(fact => {
+      const compactFact = fact.replace(/\s/g,'').toLowerCase();
+      return compactFact.length >= 2 && compactSentence.includes(compactFact);
+    }) || null;
+  }
+
+  function classifyClaims(content, product) {
+    const riskyPattern = /(最有效|第一品牌|绝对|百分之百|100%|治疗|治愈|降血糖|减肥|增强免疫|改善疾病)/;
+    const unsupportedPattern = /(高营养|高蛋白|低糖|零添加|无防腐剂|有机认证|富含[^，。；\n]{0,10}|有助于[^，。；\n]{0,12}|能够改善[^，。；\n]{0,12})/;
+    const concreteAssertionPattern = /(\d+(?:\.\d+)?\s*(?:克|千克|公斤|毫升|升|g|kg|ml|元|%|天|个月)|净含量|保质期|进口|原产|产地|配料|原料|认证|获奖|专利|销量|领先|行业首|全省|全国)/i;
+    const objectiveProductClaimPattern = /(?:产品|本品|豆腐花|豆腐|腐竹|红豆|冰糖|它|其).{0,20}(?:采用|选用|使用|含有|含|添加|不含|来自|源自|产自|制成|制作|经过|属于|是|为|支持|适合|可以|可|需要|无需|建议|提供|具备|冷藏|即食|加热|泡发)/;
+    const subjectivePattern = /(喜欢|口感|风味|感觉|仪式感|清凉|轻松|简单|熟悉|想起|更愿意|对我来说|我更喜欢|自然|日常|分享)/;
+    const evidencePool = buildEvidencePool(product);
+    return content.split(/[。！？!？\n，,；;]+/).map(sentence => sentence.trim()).filter(sentence => sentence.length > 3).map(sentence => {
+      const risky = sentence.match(riskyPattern);
+      if (risky) return { text:sentence, term:risky[0], classification:'Risky', evidence:null };
+      const forbiddenTerm = (product.forbiddenInference || []).find(term => term && sentence.includes(term));
+      if (forbiddenTerm) return { text:sentence, term:forbiddenTerm, classification:'Risky', evidence:null };
+      const unsupported = sentence.match(unsupportedPattern);
+      if (unsupported) return { text:sentence, term:unsupported[0], classification:'Unsupported', evidence:null };
+      const evidence = findSupportingEvidence(sentence, evidencePool);
+      const concreteAssertion = sentence.match(concreteAssertionPattern);
+      if (concreteAssertion) return evidence ? { text:sentence, term:sentence, classification:'Supported', evidence } : { text:sentence, term:concreteAssertion[0], classification:'Unsupported', evidence:null };
+      if (objectiveProductClaimPattern.test(sentence)) return evidence ? { text:sentence, term:sentence, classification:'Supported', evidence } : { text:sentence, term:sentence, classification:'Unsupported', evidence:null };
+      if (evidence) return { text:sentence, term:sentence, classification:'Supported', evidence };
+      if (subjectivePattern.test(sentence)) return { text:sentence, term:sentence, classification:'Subjective', evidence:null };
+      return { text:sentence, term:sentence, classification:'Subjective', evidence:null };
+    });
+  }
+
   function runQualityChecks(outputs, product) {
     const content = Object.values(outputs).map(flattenOutput).join('\n');
     const issues = [];
@@ -561,68 +533,27 @@
       if (issues.some(issue => issue.term === claim.term && issue.type === claim.classification.toLowerCase())) return;
       issues.push({ id:uid('qa'), type:claim.classification.toLowerCase(), term:claim.term, claimText:claim.text, label:claim.classification === 'Risky' ? '绝对化或食品功效表达' : '产品资料未支持的具体宣称', status:'open', message:`“${claim.term}”在当前品牌或产品资料中没有可核验依据。`, suggestion:'使用具体产品事实替代，或补充相应产品资料。' });
     });
-    Object.entries(outputs).forEach(([channel, output]) => {
-      const formatIssue = getProfileFormatIssue(channel, output);
-      if (formatIssue) issues.push(formatIssue);
-    });
+    Object.entries(outputs).forEach(([channel, output]) => { const issue = getProfileFormatIssue(channel, output); if (issue) issues.push(issue); });
     const hardSellPattern = /(立即下单|赶紧买|错过不再|最后机会|闭眼入|冲就完了|必须买|全网最低|买它|抢购|不要犹豫|不买后悔|限时秒杀)/;
     const hardSell = content.match(hardSellPattern);
     if (hardSell) issues.push({ id:uid('qa'), type:'brand', term:hardSell[0], label:'品牌表达偏差', status:'open', message:`“${hardSell[0]}”偏离自然、亲切、克制的品牌表达。`, suggestion:'改为基于具体场景的中性行动建议。' });
     return {
-      checks: [
-        { id:'facts', label:'产品事实', pass: !issues.some(item => item.type === 'unsupported') },
-        { id:'brand', label:'品牌表达', pass: !issues.some(item => item.type === 'brand') },
-        { id:'compliance', label:'食品宣传合规', pass: !issues.some(item => item.type === 'risky') },
-        { id:'format', label:'平台格式', pass: !issues.some(item => item.type === 'format') }
+      checks:[
+        {id:'facts',label:'产品事实',pass:!issues.some(item => item.type === 'unsupported')},
+        {id:'brand',label:'品牌表达',pass:!issues.some(item => item.type === 'brand')},
+        {id:'compliance',label:'食品宣传合规',pass:!issues.some(item => item.type === 'risky')},
+        {id:'format',label:'平台格式',pass:!issues.some(item => item.type === 'format')}
       ],
-      issues,
-      claimSummary: claimResults.reduce((summary, claim) => { summary[claim.classification] = (summary[claim.classification] || 0) + 1; return summary; }, {}),
-      productId: product.id,
-      checkedAt: new Date().toISOString()
+      issues, claimSummary:claimResults.reduce((summary, claim) => { summary[claim.classification] = (summary[claim.classification] || 0) + 1; return summary; }, {}), productId:product.id, checkedAt:new Date().toISOString()
     };
   }
-
   function getProfileFormatIssue(channel, output) {
-    const rule = CHANNEL_PROFILES[channel]?.formatRule;
-    if (!rule) return null;
+    const rule = CHANNEL_PROFILES[channel]?.formatRule; if (!rule) return null;
     let failed = false;
-    if (rule.type === 'arrayLength') {
-      const value = output[rule.field];
-      failed = !Array.isArray(value) || value.length < rule.min || value.length > rule.max;
-    } else if (rule.type === 'requiredText') {
-      failed = (rule.requiredFields || []).some(field => !String(output[field] || '').trim()) || !String(output[rule.field] || '').includes(rule.includes);
-    } else if (rule.type === 'minLength') {
-      failed = String(output[rule.field] || '').length < rule.min;
-    }
+    if (rule.type === 'arrayLength') { const value = output[rule.field]; failed = !Array.isArray(value) || value.length < rule.min || value.length > rule.max; }
+    else if (rule.type === 'requiredText') failed = (rule.requiredFields || []).some(field => !String(output[field] || '').trim()) || !String(output[rule.field] || '').includes(rule.includes);
+    else if (rule.type === 'minLength') failed = String(output[rule.field] || '').length < rule.min;
     return failed ? { id:uid('qa'), type:'format', channel, term:rule.term, label:rule.label, status:'open', message:rule.message, suggestion:rule.suggestion } : null;
-  }
-
-  function classifyClaims(content, product) {
-    const riskyPattern = /(最有效|第一品牌|绝对|百分之百|100%|治疗|治愈|降血糖|减肥|增强免疫|改善疾病)/;
-    const unsupportedPattern = /(高营养|高蛋白|低糖|零添加|无防腐剂|有机认证|富含[^，。；\n]{0,10}|有助于[^，。；\n]{0,12}|能够改善[^，。；\n]{0,12})/;
-    const concreteAssertionPattern = /(\d+(?:\.\d+)?\s*(?:克|千克|公斤|毫升|升|g|kg|ml|元|%|天|个月)|净含量|保质期|进口|原产|产地|配料|原料|认证|获奖|专利|销量|领先|行业首|全省|全国)/i;
-    const subjectivePattern = /(喜欢|口感|风味|感觉|更适合|仪式感|清凉|轻松|简单|慢慢吃)/;
-    const normalizedFacts = (product.usableFacts || []).map(fact => String(fact).replace(/\s/g,''));
-    return content.split(/[。！？!？\n，,；;、]+/).map(sentence => sentence.trim()).filter(sentence => sentence.length > 3).map(sentence => {
-      const risky = sentence.match(riskyPattern);
-      if (risky) return { text:sentence, term:risky[0], classification:'Risky', evidence:null };
-      const forbiddenTerm = (product.forbiddenInference || []).find(term => term && sentence.includes(term));
-      if (forbiddenTerm) return { text:sentence, term:forbiddenTerm, classification:'Risky', evidence:null };
-      const unsupported = sentence.match(unsupportedPattern);
-      if (unsupported) return { text:sentence, term:unsupported[0], classification:'Unsupported', evidence:null };
-      const compactSentence = sentence.replace(/\s/g,'');
-      const concreteAssertion = sentence.match(concreteAssertionPattern);
-      if (concreteAssertion) {
-        const compactTerm = concreteAssertion[0].replace(/\s/g,'').toLowerCase();
-        const concreteEvidence = normalizedFacts.find(fact => compactSentence.includes(fact) && fact.toLowerCase().includes(compactTerm));
-        if (concreteEvidence) return { text:sentence, term:sentence, classification:'Supported', evidence:concreteEvidence };
-        return { text:sentence, term:concreteAssertion[0], classification:'Unsupported', evidence:null };
-      }
-      const evidence = normalizedFacts.find(fact => fact.length >= 2 && compactSentence.includes(fact));
-      if (evidence) return { text:sentence, term:sentence, classification:'Supported', evidence };
-      if (subjectivePattern.test(sentence)) return { text:sentence, term:sentence, classification:'Subjective', evidence:null };
-      return { text:sentence, term:sentence, classification:'Subjective', evidence:null };
-    });
   }
 
   function addVersion(channel, label) {
@@ -631,47 +562,34 @@
     versions[channel].push({ id:uid('version'), number:versions[channel].length + 1, label, savedAt:new Date().toISOString(), content:clone(campaign.outputs[channel]) });
     saveJSON(STORAGE.versions, versions);
   }
-
   function renderCampaignState() {
     const labels = { draft:'草稿', final:'已定稿', published:'已发布' };
-    const badge = document.getElementById('campaignStateBadge');
-    badge.dataset.state = campaign.status;
-    badge.innerHTML = `<span></span>${labels[campaign.status] || '草稿'}`;
+    const badge = document.getElementById('campaignStateBadge'); badge.dataset.state = campaign.status; badge.innerHTML = `<span></span>${labels[campaign.status] || '草稿'}`;
     const current = campaign.status === 'published' ? 3 : campaign.status === 'final' ? 2 : Object.keys(campaign.outputs || {}).length ? 1 : 0;
-    document.querySelectorAll('[data-workflow]').forEach((step, index) => {
-      step.classList.toggle('is-current', index === current);
-      step.classList.toggle('is-done', index < current);
-    });
+    document.querySelectorAll('[data-workflow]').forEach((step,index) => { step.classList.toggle('is-current', index === current); step.classList.toggle('is-done', index < current); });
   }
-
   function renderGeneration() {
     const area = document.getElementById('generationArea');
     if (!campaign.outputs || !Object.keys(campaign.outputs).length) { area.hidden = true; return; }
-    area.hidden = false;
-    renderReferences(); renderPlatformOutputs(); renderQA(); renderFinalActions();
+    area.hidden = false; renderReferences(); renderPlatformOutputs(); renderQA(); renderFinalActions();
   }
-
   function renderReferences() {
     const product = getProduct(campaign.references?.productId);
     const experienceItems = (campaign.references?.experienceIds || []).map(id => experienceMemory.find(item => item.id === id)).filter(Boolean);
-    document.getElementById('referenceSummary').textContent = `品牌资料 · ${product.name}产品资料 · ${campaign.channels.length} 个平台规则${experienceItems.length ? ` · ${experienceItems.length} 条历史经验` : ''}`;
-    document.getElementById('referenceDetails').innerHTML = `
-      <div class="reference-grid">
-        <div class="reference-item"><strong>品牌资料</strong><p>${escapeHTML(brandMemory.brand.voice)}</p></div>
-        <div class="reference-item"><strong>${escapeHTML(product.name)}产品资料</strong><p>${escapeHTML(product.usableFacts.join('；'))}</p></div>
-        ${campaign.channels.map(channel => `<div class="reference-item"><strong>${escapeHTML(CHANNEL_PROFILES[channel].name)}内容规则</strong><p>${escapeHTML(CHANNEL_PROFILES[channel].rules.join('；'))}</p></div>`).join('')}
-        <div class="reference-item"><strong>历史经验 ${experienceItems.length} 条</strong>${experienceItems.length ? experienceItems.map(item => `<div class="experience-reference"><b>${escapeHTML(item.content_pattern)}</b><span>${escapeHTML(item.insight)}</span></div>`).join('') : '<p>尚未找到与当前产品、平台和内容目标同时匹配的经验。</p>'}</div>
-      </div>`;
+    const exploring = Boolean(campaign.references?.exploration);
+    document.getElementById('referenceSummary').textContent = exploring
+      ? `品牌资料 · ${product.name}产品资料 · ${campaign.channels.length} 个平台规则 · 探索模式（本轮不引用历史经验）`
+      : `品牌资料 · ${product.name}产品资料 · ${campaign.channels.length} 个平台规则${experienceItems.length ? ` · ${experienceItems.length} 条历史经验` : ''}`;
+    document.getElementById('referenceDetails').innerHTML = `<div class="reference-grid">
+      <div class="reference-item"><strong>品牌资料</strong><p>${escapeHTML(brandMemory.brand.voice)}</p></div>
+      <div class="reference-item"><strong>${escapeHTML(product.name)}产品资料</strong><p>${escapeHTML(product.usableFacts.join('；'))}</p></div>
+      ${campaign.channels.map(channel => `<div class="reference-item"><strong>${escapeHTML(CHANNEL_PROFILES[channel].name)}内容规则</strong><p>${escapeHTML(CHANNEL_PROFILES[channel].rules.join('；'))}</p></div>`).join('')}
+      <div class="reference-item"><strong>${exploring ? '探索策略' : `历史经验 ${experienceItems.length} 条`}</strong>${exploring ? '<p>本轮主动不检索 Experience Memory，只使用品牌事实、产品事实与平台规则，用于保留新表达空间。</p>' : experienceItems.length ? experienceItems.map(item => `<div class="experience-reference"><b>${escapeHTML(item.content_pattern)}</b><span>${escapeHTML(item.insight)}</span></div>`).join('') : '<p>尚未找到与当前产品、平台和内容目标同时匹配的经验。</p>'}</div>
+    </div>`;
   }
-
   function getOutputFields(channel, output) {
-    return (CHANNEL_PROFILES[channel]?.outputFields || []).map(field => {
-      const raw = output[field.key];
-      const value = field.format === 'hashtags' ? (raw || []).map(tag => `#${tag}`).join(' ') : raw;
-      return [field.key, field.label, value, Boolean(field.title)];
-    });
+    return (CHANNEL_PROFILES[channel]?.outputFields || []).map(field => { const raw = output[field.key]; const value = field.format === 'hashtags' ? (raw || []).map(tag => `#${tag}`).join(' ') : raw; return [field.key,field.label,value,Boolean(field.title)]; });
   }
-
   function renderPlatformOutputs() {
     if (!campaign.channels.includes(activePlatform)) activePlatform = campaign.channels[0];
     document.getElementById('platformTabs').innerHTML = campaign.channels.map(channel => `<button class="platform-tab ${channel === activePlatform ? 'is-active' : ''}" type="button" role="tab" data-platform-tab="${channel}">${escapeHTML(CHANNEL_PROFILES[channel].name)} <span>· ${escapeHTML(CHANNEL_PROFILES[channel].contentType)}</span></button>`).join('');
@@ -679,327 +597,171 @@
     document.querySelectorAll('[data-platform-tab]').forEach(button => button.addEventListener('click', () => { activePlatform = button.dataset.platformTab; renderPlatformOutputs(); }));
     document.querySelectorAll('[data-content-action]').forEach(button => button.addEventListener('click', () => handleContentAction(button.dataset.contentAction, button.dataset.channel)));
   }
-
   function renderPlatformCard(channel) {
-    const profile = CHANNEL_PROFILES[channel];
-    const output = campaign.outputs[channel];
-    const fields = getOutputFields(channel, output);
-    const history = versions[channel] || [];
-    return `<article class="platform-panel ${channel === activePlatform ? 'is-active' : ''}" data-platform-panel="${channel}">
-      <div class="platform-card">
-        <header class="platform-card-head">
-          <div class="platform-identity"><span class="platform-dot" style="background:${profile.color}"></span><strong>${escapeHTML(profile.name)}</strong><small>${escapeHTML(profile.contentType)}</small></div>
-          <div class="platform-actions">
-            <button class="button button-ghost" type="button" data-content-action="edit" data-channel="${channel}">编辑</button>
-            <button class="button button-ghost" type="button" data-content-action="regenerate" data-channel="${channel}">重新生成</button>
-            <button class="button button-ghost" type="button" data-content-action="copy" data-channel="${channel}">复制</button>
-            <button class="button button-ghost" type="button" data-content-action="save-version" data-channel="${channel}">保存当前版本</button>
-          </div>
-        </header>
-        <div class="content-layout">
-          <div class="content-fields">${fields.map(([key,label,value,isTitle]) => `<div class="content-field"><span class="content-label">${escapeHTML(label)}</span><p class="content-value ${isTitle ? 'title-value' : ''}" data-output-field="${key}">${escapeHTML(value)}</p></div>`).join('')}</div>
-          <aside class="content-side">
-            <div class="content-side-block"><h3>平台表达重点</h3><p>${escapeHTML(profile.tone.join(' · '))}</p></div>
-            <div class="content-side-block"><h3>历史版本</h3><div class="version-list">${history.slice().reverse().map(version => `<div class="version-row"><b>v${version.number}</b><span>${escapeHTML(version.label)}</span><span>${formatDate(version.savedAt, true)}</span></div>`).join('') || '<p>尚无历史版本</p>'}</div></div>
-            ${output.appliedExperience ? `<div class="content-side-block"><h3>已使用创作经验</h3><p>${escapeHTML(output.appliedExperience)}</p></div>` : ''}
-          </aside>
-        </div>
-        <div class="editing-actions" data-editing-actions="${channel}" hidden><button class="button button-primary" type="button" data-content-action="save-edit" data-channel="${channel}">保存修改并检查</button></div>
-      </div>
-    </article>`;
+    const profile = CHANNEL_PROFILES[channel], output = campaign.outputs[channel], fields = getOutputFields(channel, output), history = versions[channel] || [];
+    return `<article class="platform-panel ${channel === activePlatform ? 'is-active' : ''}" data-platform-panel="${channel}"><div class="platform-card">
+      <header class="platform-card-head"><div class="platform-identity"><span class="platform-dot" style="background:${profile.color}"></span><strong>${escapeHTML(profile.name)}</strong><small>${escapeHTML(profile.contentType)}</small></div><div class="platform-actions">
+      <button class="button button-ghost" type="button" data-content-action="edit" data-channel="${channel}">编辑</button><button class="button button-ghost" type="button" data-content-action="regenerate" data-channel="${channel}">重新生成</button><button class="button button-ghost" type="button" data-content-action="copy" data-channel="${channel}">复制</button><button class="button button-ghost" type="button" data-content-action="save-version" data-channel="${channel}">保存当前版本</button></div></header>
+      <div class="content-layout"><div class="content-fields">${fields.map(([key,label,value,isTitle]) => `<div class="content-field"><span class="content-label">${escapeHTML(label)}</span><p class="content-value ${isTitle ? 'title-value' : ''}" data-output-field="${key}">${escapeHTML(value)}</p></div>`).join('')}</div>
+      <aside class="content-side"><div class="content-side-block"><h3>平台表达重点</h3><p>${escapeHTML(profile.tone.join(' · '))}</p></div><div class="content-side-block"><h3>历史版本</h3><div class="version-list">${history.slice().reverse().map(version => `<div class="version-row"><b>v${version.number}</b><span>${escapeHTML(version.label)}</span><span>${formatDate(version.savedAt,true)}</span></div>`).join('') || '<p>尚无历史版本</p>'}</div></div>${output.appliedExperience ? `<div class="content-side-block"><h3>已使用创作经验</h3><p>${escapeHTML(output.appliedExperience)}</p></div>` : output.strategyNote ? `<div class="content-side-block"><h3>生成策略</h3><p>${escapeHTML(output.strategyNote)}</p></div>` : ''}</aside></div>
+      <div class="editing-actions" data-editing-actions="${channel}" hidden><button class="button button-primary" type="button" data-content-action="save-edit" data-channel="${channel}">保存修改并检查</button></div>
+    </div></article>`;
   }
-
   function handleContentAction(action, channel) {
     if (action === 'copy') return copyChannel(channel);
     if (action === 'regenerate') return regenerateChannel(channel);
-    if (action === 'save-version') { addVersion(channel, '手动保存'); persistCampaign(); renderPlatformOutputs(); toast(`${CHANNEL_PROFILES[channel].name}当前版本已保存`); return; }
+    if (action === 'save-version') { addVersion(channel,'手动保存'); persistCampaign(); renderPlatformOutputs(); toast(`${CHANNEL_PROFILES[channel].name}当前版本已保存`); return; }
     if (action === 'edit') return startEditing(channel);
     if (action === 'save-edit') return saveEdits(channel);
   }
   function startEditing(channel) {
-    const panel = document.querySelector(`[data-platform-panel="${channel}"]`);
-    panel.querySelectorAll('[data-output-field]').forEach(field => field.setAttribute('contenteditable','true'));
-    panel.querySelector(`[data-editing-actions="${channel}"]`).hidden = false;
-    panel.querySelector('[data-output-field]')?.focus();
-    toast('已进入编辑模式');
+    const panel = document.querySelector(`[data-platform-panel="${channel}"]`); panel.querySelectorAll('[data-output-field]').forEach(field => field.setAttribute('contenteditable','true')); panel.querySelector(`[data-editing-actions="${channel}"]`).hidden = false; panel.querySelector('[data-output-field]')?.focus(); toast('已进入编辑模式');
   }
   function saveEdits(channel) {
     const panel = document.querySelector(`[data-platform-panel="${channel}"]`);
-    panel.querySelectorAll('[data-output-field]').forEach(field => {
-      const key = field.dataset.outputField;
-      const value = field.textContent.trim();
-      campaign.outputs[channel][key] = key === 'hashtags' ? value.split(/\s+/).map(tag => tag.replace(/^#/,'')).filter(Boolean).slice(0,8) : value;
-      field.removeAttribute('contenteditable');
-    });
-    addVersion(channel, '用户修改');
-    campaign.qa = runQualityChecks(campaign.outputs, getProduct());
-    campaign.status = 'draft';
-    persistCampaign(); renderCampaignState(); renderGeneration();
-    toast('修改已保存，并重新完成发布前检查');
+    panel.querySelectorAll('[data-output-field]').forEach(field => { const key = field.dataset.outputField, value = field.textContent.trim(); campaign.outputs[channel][key] = key === 'hashtags' ? value.split(/\s+/).map(tag => tag.replace(/^#/,'')).filter(Boolean).slice(0,8) : value; field.removeAttribute('contenteditable'); });
+    addVersion(channel,'用户修改'); campaign.qa = runQualityChecks(campaign.outputs,getProduct()); campaign.status = 'draft'; persistCampaign(); renderCampaignState(); renderGeneration(); toast('修改已保存，并重新完成发布前检查');
   }
   function regenerateChannel(channel) {
     const product = getProduct();
-    const relevant = retrieveExperiences(campaign, product).slice(0,3);
+    const relevant = retrieveExperiences(campaign, product).filter(item => item.platform === channel).slice(0,3);
     campaign.outputs[channel] = generateChannelContent(channel, campaign, product, relevant, false);
-    addVersion(channel, 'AI 重新生成');
-    campaign.qa = runQualityChecks(campaign.outputs, product);
-    campaign.status = 'draft';
-    persistCampaign(); renderCampaignState(); renderGeneration();
-    toast(`${CHANNEL_PROFILES[channel].name}已重新生成`);
+    addVersion(channel,'AI 重新生成'); campaign.qa = runQualityChecks(campaign.outputs,product); campaign.status = 'draft'; persistCampaign(); renderCampaignState(); renderGeneration(); toast(`${CHANNEL_PROFILES[channel].name}已重新生成`);
   }
   async function copyChannel(channel) {
-    const profile = CHANNEL_PROFILES[channel];
-    const output = campaign.outputs[channel];
-    const text = `${profile.name}\n\n${getOutputFields(channel, output).map(([,label,value]) => `${label}\n${value}`).join('\n\n')}`;
+    const profile = CHANNEL_PROFILES[channel], output = campaign.outputs[channel];
+    const text = `${profile.name}\n\n${getOutputFields(channel,output).map(([,label,value]) => `${label}\n${value}`).join('\n\n')}`;
     try { await navigator.clipboard.writeText(text); toast(`${profile.name}内容已复制`); }
-    catch (_) {
-      const area = document.createElement('textarea'); area.value = text; document.body.appendChild(area); area.select(); document.execCommand('copy'); area.remove(); toast(`${profile.name}内容已复制`);
-    }
+    catch (_) { const area = document.createElement('textarea'); area.value = text; document.body.appendChild(area); area.select(); document.execCommand('copy'); area.remove(); toast(`${profile.name}内容已复制`); }
   }
 
   function renderQA() {
-    const qa = campaign.qa || { checks:[], issues:[] };
-    const openIssues = qa.issues.filter(issue => issue.status === 'open');
-    const card = document.getElementById('qaCard');
-    card.classList.toggle('has-issues', openIssues.length > 0);
-    document.getElementById('qaIcon').textContent = openIssues.length ? '!' : '✓';
+    const qa = campaign.qa || {checks:[],issues:[]}, openIssues = qa.issues.filter(issue => issue.status === 'open'), card = document.getElementById('qaCard');
+    card.classList.toggle('has-issues', openIssues.length > 0); document.getElementById('qaIcon').textContent = openIssues.length ? '!' : '✓';
     document.getElementById('qaSummary').textContent = openIssues.length ? `发现 ${openIssues.length} 个需要确认的问题` : '产品事实、品牌表达、食品宣传合规和平台格式均已检查，可以进入定稿。';
     document.getElementById('qaChecks').innerHTML = qa.checks.map(check => `<span class="qa-check ${check.pass ? '' : 'is-warning'}">${escapeHTML(check.label)}</span>`).join('');
     document.getElementById('qaIssues').innerHTML = openIssues.map(issue => `<div class="qa-issue"><div><strong>${escapeHTML(issue.label)} · ${escapeHTML(issue.term)}</strong><p>${escapeHTML(issue.message)}<br>建议：${escapeHTML(issue.suggestion)}</p></div><div class="qa-issue-actions"><button class="button button-secondary" type="button" data-qa-action="adopt" data-issue="${issue.id}">采纳修改</button><button class="button button-ghost" type="button" data-qa-action="ignore" data-issue="${issue.id}">忽略并继续</button></div></div>`).join('');
-    document.querySelectorAll('[data-qa-action]').forEach(button => button.addEventListener('click', () => resolveQAIssue(button.dataset.issue, button.dataset.qaAction)));
+    document.querySelectorAll('[data-qa-action]').forEach(button => button.addEventListener('click', () => resolveQAIssue(button.dataset.issue,button.dataset.qaAction)));
   }
   function resolveQAIssue(issueId, action) {
-    const issue = campaign.qa.issues.find(item => item.id === issueId);
-    if (!issue) return;
+    const issue = campaign.qa.issues.find(item => item.id === issueId); if (!issue) return;
     if (action === 'adopt') {
-      if (issue.type === 'format') {
-        applyFormatFix(issue);
-      } else {
+      if (issue.type === 'format') applyFormatFix(issue);
+      else {
         const replacement = issue.type === 'brand' ? '可以按自己的日常需要进一步了解' : (getProduct().usableFacts[0] || '已确认的产品特点');
         const target = issue.claimText || issue.term;
-        Object.keys(campaign.outputs).forEach(channel => {
-          Object.keys(campaign.outputs[channel]).forEach(key => {
-            const value = campaign.outputs[channel][key];
-            if (typeof value === 'string') campaign.outputs[channel][key] = value.split(target).join(replacement);
-            if (Array.isArray(value)) campaign.outputs[channel][key] = value.map(item => String(item).split(target).join(replacement));
-          });
-        });
+        Object.keys(campaign.outputs).forEach(channel => Object.keys(campaign.outputs[channel]).forEach(key => { const value = campaign.outputs[channel][key]; if (typeof value === 'string') campaign.outputs[channel][key] = value.split(target).join(replacement); if (Array.isArray(value)) campaign.outputs[channel][key] = value.map(item => String(item).split(target).join(replacement)); }));
       }
-      issue.status = 'adopted'; issue.resolvedAt = new Date().toISOString();
-      campaign.qa = runQualityChecks(campaign.outputs, getProduct());
-      Object.keys(campaign.outputs).forEach(channel => addVersion(channel, '采纳检查建议'));
-      toast('已采纳修改并重新检查');
+      issue.status = 'adopted'; issue.resolvedAt = new Date().toISOString(); campaign.qa = runQualityChecks(campaign.outputs,getProduct()); Object.keys(campaign.outputs).forEach(channel => addVersion(channel,'采纳检查建议')); toast('已采纳修改并重新检查');
     } else {
       issue.status = 'ignored'; issue.resolvedAt = new Date().toISOString();
-      campaign.qa.checks = campaign.qa.checks.map(check => ({ ...check, pass: !campaign.qa.issues.some(item => item.status === 'open' && (item.type === check.id || (check.id === 'facts' && item.type === 'unsupported') || (check.id === 'compliance' && item.type === 'risky'))) }));
-      toast('已记录忽略状态，可继续定稿');
+      campaign.qa.checks = campaign.qa.checks.map(check => ({...check,pass:!campaign.qa.issues.some(item => item.status === 'open' && (item.type === check.id || (check.id === 'facts' && item.type === 'unsupported') || (check.id === 'compliance' && item.type === 'risky')))})); toast('已记录忽略状态，可继续定稿');
     }
     persistCampaign(); renderGeneration();
   }
-
   function applyFormatFix(issue) {
-    const product = getProduct();
-    const output = campaign.outputs[issue.channel];
-    const profile = CHANNEL_PROFILES[issue.channel];
-    const rule = profile?.formatRule;
-    if (!output || !rule) return;
+    const product = getProduct(), output = campaign.outputs[issue.channel], profile = CHANNEL_PROFILES[issue.channel], rule = profile?.formatRule; if (!output || !rule) return;
     if (rule.type === 'arrayLength') {
-      const fallbacks = [product.category.split(' / ')[0], product.scenarios[0], '家庭分享', '日常饮食'];
-      output[rule.field] = [...new Set([...(Array.isArray(output[rule.field]) ? output[rule.field] : []), ...fallbacks])].filter(Boolean).slice(0, rule.max);
-      while (output[rule.field].length < rule.min) output[rule.field].push(`内容灵感${output[rule.field].length + 1}`);
+      const fallbacks = [product.category.split(' / ')[0],product.scenarios[0],'家庭分享','日常饮食']; output[rule.field] = [...new Set([...(Array.isArray(output[rule.field]) ? output[rule.field] : []),...fallbacks])].filter(Boolean).slice(0,rule.max); while (output[rule.field].length < rule.min) output[rule.field].push(`内容灵感${output[rule.field].length+1}`);
     } else {
-      const safe = generateChannelContent(issue.channel, campaign, product, retrieveExperiences(campaign, product).slice(0,3), false);
-      if (rule.type === 'requiredText') {
-        (rule.requiredFields || []).forEach(field => { if (!String(output[field] || '').trim()) output[field] = safe[field]; });
-        if (!String(output[rule.field] || '').includes(rule.includes)) output[rule.field] = safe[rule.field];
-      } else if (rule.type === 'minLength' && String(output[rule.field] || '').length < rule.min) {
-        output[rule.field] = safe[rule.field];
-      }
+      const safe = generateChannelContent(issue.channel,campaign,product,retrieveExperiences(campaign,product).filter(item => item.platform === issue.channel).slice(0,3),false);
+      if (rule.type === 'requiredText') { (rule.requiredFields || []).forEach(field => { if (!String(output[field] || '').trim()) output[field] = safe[field]; }); if (!String(output[rule.field] || '').includes(rule.includes)) output[rule.field] = safe[rule.field]; }
+      else if (rule.type === 'minLength' && String(output[rule.field] || '').length < rule.min) output[rule.field] = safe[rule.field];
     }
   }
 
   function renderFinalActions() {
-    const openIssues = campaign.qa?.issues?.filter(issue => issue.status === 'open') || [];
-    const finalize = document.getElementById('finalizeButton');
-    const publish = document.getElementById('publishButton');
-    finalize.hidden = ['final','published'].includes(campaign.status);
-    publish.hidden = campaign.status !== 'final';
-    finalize.disabled = openIssues.length > 0;
-    if (campaign.status === 'published') {
-      document.getElementById('nextActionTitle').textContent = '内容已标记发布';
-      document.getElementById('nextActionCopy').textContent = '前往效果复盘查看状态；暂无数据时不会自动补充指标。';
-    } else if (campaign.status === 'final') {
-      document.getElementById('nextActionTitle').textContent = '内容已定稿';
-      document.getElementById('nextActionCopy').textContent = '确认实际发布信息后，标记为已发布。';
-    } else if (openIssues.length) {
-      document.getElementById('nextActionTitle').textContent = '请先处理发布前检查问题';
-      document.getElementById('nextActionCopy').textContent = '采纳修改或记录忽略状态后，才能确认定稿。';
-    } else {
-      document.getElementById('nextActionTitle').textContent = '内容已准备好进入定稿';
-      document.getElementById('nextActionCopy').textContent = '确认后仍可查看历史版本。';
-    }
+    const openIssues = campaign.qa?.issues?.filter(issue => issue.status === 'open') || [], finalize = document.getElementById('finalizeButton'), publish = document.getElementById('publishButton');
+    finalize.hidden = ['final','published'].includes(campaign.status); publish.hidden = campaign.status !== 'final'; finalize.disabled = openIssues.length > 0;
+    if (campaign.status === 'published') { document.getElementById('nextActionTitle').textContent = '内容已标记发布'; document.getElementById('nextActionCopy').textContent = '前往效果复盘查看状态；暂无数据时不会自动补充指标。'; }
+    else if (campaign.status === 'final') { document.getElementById('nextActionTitle').textContent = '内容已定稿'; document.getElementById('nextActionCopy').textContent = '确认实际发布信息后，标记为已发布。'; }
+    else if (openIssues.length) { document.getElementById('nextActionTitle').textContent = '请先处理发布前检查问题'; document.getElementById('nextActionCopy').textContent = '采纳修改或记录忽略状态后，才能确认定稿。'; }
+    else { document.getElementById('nextActionTitle').textContent = '内容已准备好进入定稿'; document.getElementById('nextActionCopy').textContent = '确认后仍可查看历史版本。'; }
   }
-
   function finalizeCampaign() {
     if (campaign.qa.issues.some(issue => issue.status === 'open')) { toast('请先处理发布前检查中的问题'); return; }
-    campaign.status = 'final';
-    Object.keys(campaign.outputs).forEach(channel => addVersion(channel, '最终定稿'));
-    persistCampaign(); renderCampaignState(); renderGeneration();
-    toast('内容已确认定稿');
+    campaign.status = 'final'; Object.keys(campaign.outputs).forEach(channel => addVersion(channel,'最终定稿')); persistCampaign(); renderCampaignState(); renderGeneration(); toast('内容已确认定稿');
   }
-
   function toggleReferences() {
-    const details = document.getElementById('referenceDetails');
-    const button = document.getElementById('toggleReferencesButton');
-    details.hidden = !details.hidden;
-    button.setAttribute('aria-expanded', String(!details.hidden));
-    button.textContent = details.hidden ? '查看依据' : '收起依据';
+    const details = document.getElementById('referenceDetails'), button = document.getElementById('toggleReferencesButton'); details.hidden = !details.hidden; button.setAttribute('aria-expanded',String(!details.hidden)); button.textContent = details.hidden ? '查看依据' : '收起依据';
   }
-
   function exportContent() {
     if (!campaign.outputs || !Object.keys(campaign.outputs).length) return;
-    const product = getProduct();
-    const text = [`# ${campaign.name || '内容创作'}\n`, `推广产品：${product.name}`, `内容目标：${GOALS[campaign.goal]}`, `目标人群：${campaign.audience}\n`];
-    campaign.channels.forEach(channel => {
-      const profile = CHANNEL_PROFILES[channel];
-      text.push(`## ${profile.name}\n`);
-      getOutputFields(channel, campaign.outputs[channel]).forEach(([,label,value]) => text.push(`### ${label}\n${value}\n`));
-    });
-    const blob = new Blob([text.join('\n')], { type:'text/markdown;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a'); link.href = url; link.download = `${product.name}-平台内容.md`; link.click();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-    toast('内容已导出');
+    const product = getProduct(), text = [`# ${campaign.name || '内容创作'}\n`,`推广产品：${product.name}`,`内容目标：${GOALS[campaign.goal]}`,`目标人群：${campaign.audience}\n`];
+    campaign.channels.forEach(channel => { const profile = CHANNEL_PROFILES[channel]; text.push(`## ${profile.name}\n`); getOutputFields(channel,campaign.outputs[channel]).forEach(([,label,value]) => text.push(`### ${label}\n${value}\n`)); });
+    const blob = new Blob([text.join('\n')],{type:'text/markdown;charset=utf-8'}), url = URL.createObjectURL(blob), link = document.createElement('a'); link.href = url; link.download = `${product.name}-平台内容.md`; link.click(); setTimeout(() => URL.revokeObjectURL(url),1000); toast('内容已导出');
   }
 
   function openPublishModal() {
     document.getElementById('publishChannelList').innerHTML = campaign.channels.map(channel => `<label><input type="checkbox" name="publishChannel" value="${channel}" checked>${escapeHTML(CHANNEL_PROFILES[channel].name)}</label>`).join('');
-    document.getElementById('publishTimeInput').value = dateTimeLocalValue();
-    document.getElementById('publishUrlInput').value = '';
-    openDialog('publishModal');
+    document.getElementById('publishTimeInput').value = dateTimeLocalValue(); document.getElementById('publishUrlInput').value = ''; openDialog('publishModal');
   }
   function confirmPublish(event) {
-    event.preventDefault();
-    if (event.submitter && event.submitter.id !== 'confirmPublishButton') return;
-    const channels = [...document.querySelectorAll('input[name="publishChannel"]:checked')].map(input => input.value);
-    if (!channels.length) { toast('请至少选择一个已发布平台'); return; }
-    const publishedAt = document.getElementById('publishTimeInput').value;
-    const url = document.getElementById('publishUrlInput').value.trim();
-    const source = document.querySelector('input[name="dataSource"]:checked')?.value || 'manual';
-    const product = getProduct();
-    channels.forEach(channel => {
-      const output = campaign.outputs[channel];
-      performanceData.unshift({
-        id:uid('published'), title:output.title || output.hook || campaign.name, platform:channel, product:product.name, product_category:product.category,
-        goal:campaign.goal, published_at:new Date(publishedAt).toISOString(), source, url, metrics:null, status:'waiting', campaign_id:campaign.id,
-        pattern:derivePublishedPattern(channel, output, product)
-      });
-    });
-    campaign.status = 'published';
-    saveJSON(STORAGE.performance, performanceData); persistCampaign(); closeDialog('publishModal');
-    renderCampaignState(); renderGeneration(); renderPerformance();
-    toast(`已记录 ${channels.length} 个平台的发布内容，当前等待表现数据`);
+    event.preventDefault(); if (event.submitter && event.submitter.id !== 'confirmPublishButton') return;
+    const channels = [...document.querySelectorAll('input[name="publishChannel"]:checked')].map(input => input.value); if (!channels.length) { toast('请至少选择一个已发布平台'); return; }
+    const publishedAt = document.getElementById('publishTimeInput').value, url = document.getElementById('publishUrlInput').value.trim(), source = document.querySelector('input[name="dataSource"]:checked')?.value || 'manual', product = getProduct();
+    channels.forEach(channel => { const output = campaign.outputs[channel]; performanceData.unshift({ id:uid('published'), title:output.title || output.hook || campaign.name, platform:channel, product:product.name, product_category:product.category, goal:campaign.goal, published_at:new Date(publishedAt).toISOString(), source, url, metrics:null, status:'waiting', campaign_id:campaign.id, pattern:derivePublishedPattern(channel,output,product) }); });
+    campaign.status = 'published'; saveJSON(STORAGE.performance,performanceData); persistCampaign(); closeDialog('publishModal'); renderCampaignState(); renderGeneration(); renderPerformance(); toast(`已记录 ${channels.length} 个平台的发布内容，当前等待表现数据`);
   }
-
   function derivePublishedPattern(channel, output, product) {
-    const profile = CHANNEL_PROFILES[channel];
-    return {
-      hook:output.title || output.hook || campaign.name || product.name,
-      structure:(profile?.structure || []).join(' → ') || '按平台内容结构展开',
-      expression:(profile?.tone || []).join('、') || brandMemory.brand.voice,
-      scope:`${product.category} / ${buildCampaignContext(campaign, product).primaryScene} / ${campaign.goal}`
-    };
+    const profile = CHANNEL_PROFILES[channel]; return { hook:output.title || output.hook || campaign.name || product.name, structure:(profile?.structure || []).join(' → ') || '按平台内容结构展开', expression:(profile?.tone || []).join('、') || brandMemory.brand.voice, scope:`${product.category} / ${buildCampaignContext(campaign,product).primaryScene} / ${campaign.goal}` };
   }
-
   function ensureRecordPattern(record) {
-    const placeholder = !record.pattern || Object.values(record.pattern).some(value => String(value).includes('等待表现数据后分析'));
-    if (!placeholder) return;
-    const product = brandMemory.products.find(item => item.name === record.product) || { name:record.product, category:record.product_category, scenarios:['日常饮食'] };
-    const output = record.campaign_id === campaign.id ? campaign.outputs?.[record.platform] : null;
-    record.pattern = derivePublishedPattern(record.platform, output || { title:record.title }, product);
+    const placeholder = !record.pattern || Object.values(record.pattern).some(value => String(value).includes('等待表现数据后分析')); if (!placeholder) return;
+    const product = brandMemory.products.find(item => item.name === record.product) || {name:record.product,category:record.product_category,scenarios:['日常饮食']};
+    const output = record.campaign_id === campaign.id ? campaign.outputs?.[record.platform] : null; record.pattern = derivePublishedPattern(record.platform,output || {title:record.title},product);
   }
 
-  function openDialog(id) {
-    const dialog = document.getElementById(id);
-    document.getElementById('modalBackdrop').hidden = false;
-    if (!dialog.open && typeof dialog.showModal === 'function') dialog.showModal();
-    else if (!dialog.open) dialog.setAttribute('open','');
-  }
-  function closeDialog(id) {
-    const dialog = document.getElementById(id);
-    if (dialog.open && typeof dialog.close === 'function') dialog.close(); else dialog.removeAttribute('open');
-    if (![...document.querySelectorAll('dialog')].some(item => item.open)) document.getElementById('modalBackdrop').hidden = true;
-  }
-  function syncModalBackdrop() {
-    if (![...document.querySelectorAll('dialog')].some(item => item.open)) document.getElementById('modalBackdrop').hidden = true;
-  }
+  function openDialog(id) { const dialog = document.getElementById(id); document.getElementById('modalBackdrop').hidden = false; if (!dialog.open && typeof dialog.showModal === 'function') dialog.showModal(); else if (!dialog.open) dialog.setAttribute('open',''); }
+  function closeDialog(id) { const dialog = document.getElementById(id); if (dialog.open && typeof dialog.close === 'function') dialog.close(); else dialog.removeAttribute('open'); if (![...document.querySelectorAll('dialog')].some(item => item.open)) document.getElementById('modalBackdrop').hidden = true; }
+  function syncModalBackdrop() { if (![...document.querySelectorAll('dialog')].some(item => item.open)) document.getElementById('modalBackdrop').hidden = true; }
 
-  function updateMemoryCounts() {
-    document.getElementById('memoryCount').textContent = `${experienceMemory.length} 条创作经验`;
-    document.getElementById('experienceTabCount').textContent = experienceMemory.length;
-  }
-
+  function updateMemoryCounts() { document.getElementById('memoryCount').textContent = `${experienceMemory.length} 条创作经验`; document.getElementById('experienceTabCount').textContent = experienceMemory.length; }
   function renderMemory() {
-    document.querySelectorAll('[data-memory-tab]').forEach(button => button.classList.toggle('is-active', button.dataset.memoryTab === activeMemoryTab));
+    document.querySelectorAll('[data-memory-tab]').forEach(button => button.classList.toggle('is-active',button.dataset.memoryTab === activeMemoryTab));
     const content = document.getElementById('memoryContent');
     if (activeMemoryTab === 'brand') {
-      const brand = brandMemory.brand;
-      const entries = [['品牌介绍',brand.intro,brand.source],['品牌定位',brand.positioning,brand.source],['品牌表达风格',brand.voice,brand.source],['目标消费者',brand.audience,brand.source],['核心价值',brand.values,brand.source],['禁止表达',brand.forbidden,brand.source], ...(brandMemory.customFacts || []).map(item => [item.title,item.content,item.source || '用户导入'])];
-      content.innerHTML = `<div class="memory-panel"><div class="memory-note">ℹ 这里保存稳定的品牌事实。历史内容表现不会写入品牌资料，而是进入“创作经验”。</div><div class="brand-grid">${entries.map(([title,value,source]) => `<article class="memory-card"><h3>${escapeHTML(title)}</h3><p>${escapeHTML(value)}</p><small>${escapeHTML(source || '演示资料')}</small></article>`).join('')}</div></div>`;
-      return;
+      const brand = brandMemory.brand, entries = [['品牌介绍',brand.intro,brand.source],['品牌定位',brand.positioning,brand.source],['品牌表达风格',brand.voice,brand.source],['目标消费者',brand.audience,brand.source],['核心价值',brand.values,brand.source],['禁止表达',brand.forbidden,brand.source],...(brandMemory.customFacts || []).map(item => [item.title,item.content,item.source || '用户导入'])];
+      content.innerHTML = `<div class="memory-panel"><div class="memory-note">ℹ 这里保存稳定的品牌事实。历史内容表现不会写入品牌资料，而是进入“创作经验”。</div><div class="brand-grid">${entries.map(([title,value,source]) => `<article class="memory-card"><h3>${escapeHTML(title)}</h3><p>${escapeHTML(value)}</p><small>${escapeHTML(source || '演示资料')}</small></article>`).join('')}</div></div>`; return;
     }
     if (activeMemoryTab === 'products') {
-      content.innerHTML = `<div class="memory-panel product-grid">${brandMemory.products.map(product => `<article class="product-card"><header class="product-card-head"><h3>${escapeHTML(product.name)}</h3><span>${escapeHTML(product.source)}</span></header><div class="product-card-body"><dl class="fact-list"><dt>产品类别</dt><dd>${escapeHTML(product.category)}</dd><dt>产品介绍</dt><dd>${escapeHTML(product.description)}</dd><dt>主要卖点</dt><dd>${escapeHTML(product.sellingPoints.join('；'))}</dd><dt>规格</dt><dd>${escapeHTML(product.specification)}</dd><dt>食用方式</dt><dd>${escapeHTML(product.serving)}</dd><dt>适用场景</dt><dd>${escapeHTML(product.scenarios.join('；'))}</dd><dt>可使用事实</dt><dd>${escapeHTML(product.usableFacts.join('；'))}</dd><dt>禁止推断</dt><dd>${escapeHTML(product.forbiddenInference.join('；'))}</dd></dl></div></article>`).join('')}</div>`;
-      return;
+      content.innerHTML = `<div class="memory-panel product-grid">${brandMemory.products.map(product => `<article class="product-card"><header class="product-card-head"><h3>${escapeHTML(product.name)}</h3><span>${escapeHTML(product.source)}</span></header><div class="product-card-body"><dl class="fact-list"><dt>产品类别</dt><dd>${escapeHTML(product.category)}</dd><dt>产品介绍</dt><dd>${escapeHTML(product.description)}</dd><dt>主要卖点</dt><dd>${escapeHTML(product.sellingPoints.join('；'))}</dd><dt>规格</dt><dd>${escapeHTML(product.specification)}</dd><dt>食用方式</dt><dd>${escapeHTML(product.serving)}</dd><dt>适用场景</dt><dd>${escapeHTML(product.scenarios.join('；'))}</dd><dt>可使用事实</dt><dd>${escapeHTML(product.usableFacts.join('；'))}</dd><dt>禁止推断</dt><dd>${escapeHTML(product.forbiddenInference.join('；'))}</dd></dl></div></article>`).join('')}</div>`; return;
     }
-    content.innerHTML = `<div class="memory-panel"><div class="memory-note">✦ 创作经验回答“过去什么创作方式表现较好”，生成时会按平台、产品类别、内容目标和主题相关性匹配。</div>${experienceMemory.length ? `<div class="experience-list">${experienceMemory.slice().sort((a,b) => new Date(b.learned_at)-new Date(a.learned_at)).map(item => `<article class="experience-card"><div><div class="experience-platform">${escapeHTML(CHANNEL_PROFILES[item.platform]?.name || item.platform)} · 高表现经验</div><h3>${escapeHTML(item.content_pattern)}</h3><p>${escapeHTML(item.insight)}</p><small>来源：${escapeHTML(item.source_campaign)} · 学习于 ${formatDate(item.learned_at)}</small></div><div class="experience-evidence"><strong>+${Math.round(item.lift)}%</strong><small>${escapeHTML(metricLabel(item.metric_name))} 相比近期基线</small><small>${formatMetricValue(item.metric_name,item.metric_value)} vs ${formatMetricValue(item.metric_name,item.baseline_value)}</small></div></article>`).join('')}</div>` : '<div class="empty-state"><strong>还没有创作经验</strong>前往效果复盘，从高表现内容中加入第一条经验。</div>'}</div>`;
+    content.innerHTML = `<div class="memory-panel"><div class="memory-note">✦ 创作经验回答“过去什么创作方式表现较好”，生成时会按平台、产品类别、内容目标和主题相关性匹配。</div>${experienceMemory.length ? `<div class="experience-list">${experienceMemory.slice().sort((a,b) => new Date(b.learned_at)-new Date(a.learned_at)).map(item => `<article class="experience-card"><div><div class="experience-platform">${escapeHTML(CHANNEL_PROFILES[item.platform]?.name || item.platform)} · 高表现经验</div><h3>${escapeHTML(item.content_pattern)}</h3><p>${escapeHTML(item.insight)}</p><small>来源：${escapeHTML(item.source_campaign)} · 学习于 ${formatDate(item.learned_at)}</small></div><div class="experience-evidence"><strong>+${Math.round(item.lift)}%</strong><small>${escapeHTML(metricLabel(item.metric_name))} 相比历史基线</small><small>${formatMetricValue(item.metric_name,item.metric_value)} vs ${formatMetricValue(item.metric_name,item.baseline_value)}</small></div></article>`).join('')}</div>` : '<div class="empty-state"><strong>还没有创作经验</strong>前往效果复盘，从高表现内容中加入第一条经验。</div>'}</div>`;
   }
 
   function deriveMetric(record, metric) {
-    if (!record.metrics) return null;
-    const m = record.metrics;
-    if (Number.isFinite(m[metric])) return m[metric];
-    const base = record.platform === 'xiaohongshu' ? m.impressions : record.platform === 'douyin' ? m.plays : m.reads;
-    if (!base) return null;
+    if (!record.metrics) return null; const m = record.metrics; if (Number.isFinite(m[metric])) return m[metric];
+    const base = record.platform === 'xiaohongshu' ? m.impressions : record.platform === 'douyin' ? m.plays : m.reads; if (!base) return null;
     if (metric === 'collect_rate') return (m.collects || 0) / base * 100;
     if (metric === 'share_rate') return (m.shares || 0) / base * 100;
     if (metric === 'engagement_rate') return ((m.likes || 0) + (m.comments || 0) + (m.shares || 0) + (m.collects || 0)) / base * 100;
     return null;
   }
   function analyzePerformance(record) {
-    const profile = CHANNEL_PROFILES[record.platform];
-    const metric = profile?.goalMetrics?.[record.goal];
-    const value = metric ? deriveMetric(record, metric) : null;
-    if (!Number.isFinite(value)) return { metric, value:null, baseline:null, lift:null, status:'waiting' };
-    const groupValues = performanceData.filter(item => item.platform === record.platform && item.goal === record.goal).map(item => deriveMetric(item, metric)).filter(Number.isFinite);
-    const baseline = median(groupValues);
-    const top20 = percentile(groupValues, .8);
-    const lift = baseline ? (value - baseline) / baseline * 100 : 0;
+    const profile = CHANNEL_PROFILES[record.platform], metric = profile?.goalMetrics?.[record.goal], value = metric ? deriveMetric(record,metric) : null;
+    if (!Number.isFinite(value)) return { metric, value:null, baseline:null, top20:null, lift:null, baselineCount:0, status:'waiting' };
+    const peerValues = performanceData
+      .filter(item => item.id !== record.id && item.platform === record.platform && item.goal === record.goal)
+      .map(item => deriveMetric(item,metric)).filter(Number.isFinite);
+    const baselineCount = peerValues.length;
+    const baseline = median(peerValues), top20 = percentile(peerValues,.8);
+    if (baselineCount < MIN_BASELINE_PEERS || !Number.isFinite(baseline)) return { metric, value, baseline, top20, lift:null, baselineCount, status:'insufficient' };
+    const lift = baseline > 0 ? (value - baseline) / baseline * 100 : 0;
     const status = (lift >= 20 || (top20 !== null && value >= top20 && lift > 0)) ? 'winner' : lift < -10 ? 'review' : 'normal';
-    return { metric, value, baseline, lift, status };
+    return { metric, value, baseline, top20, lift, baselineCount, status };
   }
-  function metricLabel(metric) {
-    return ({ impressions:'曝光量', plays:'播放量', reads:'阅读量', likes:'点赞', collects:'收藏', comments:'评论', shares:'分享', collect_rate:'收藏率', share_rate:'分享率', engagement_rate:'互动率', completion_rate:'完播率', ctr:'点击率', conversion_rate:'转化率' })[metric] || metric || '核心指标';
-  }
-  function formatMetricValue(metric, value) {
-    if (!Number.isFinite(value)) return '—';
-    if (['impressions','plays','reads'].includes(metric)) return new Intl.NumberFormat('zh-CN').format(Math.round(value));
-    return `${value.toFixed(1)}%`;
-  }
+  function metricLabel(metric) { return ({impressions:'曝光量',plays:'播放量',reads:'阅读量',likes:'点赞',collects:'收藏',comments:'评论',shares:'分享',collect_rate:'收藏率',share_rate:'分享率',engagement_rate:'互动率',completion_rate:'完播率',ctr:'点击率',conversion_rate:'转化率'})[metric] || metric || '核心指标'; }
+  function formatMetricValue(metric, value) { if (!Number.isFinite(value)) return '—'; if (['impressions','plays','reads'].includes(metric)) return new Intl.NumberFormat('zh-CN').format(Math.round(value)); return `${value.toFixed(1)}%`; }
+  function formatLift(analysis) { return Number.isFinite(analysis.lift) ? `${analysis.lift >= 0 ? '+' : ''}${Math.round(analysis.lift)}%` : '—'; }
 
   function renderPerformance() {
-    const analyzed = performanceData.map(record => ({ record, analysis:analyzePerformance(record) }));
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    const recent = analyzed.filter(item => new Date(item.record.published_at) >= thirtyDaysAgo).length;
-    const winners = analyzed.filter(item => item.analysis.status === 'winner').length;
-    const platformWinnerCounts = {};
+    const analyzed = performanceData.map(record => ({record,analysis:analyzePerformance(record)}));
+    const thirtyDaysAgo = new Date(); thirtyDaysAgo.setDate(thirtyDaysAgo.getDate()-30);
+    const recent = analyzed.filter(item => new Date(item.record.published_at) >= thirtyDaysAgo).length, winners = analyzed.filter(item => item.analysis.status === 'winner').length, platformWinnerCounts = {};
     analyzed.filter(item => item.analysis.status === 'winner').forEach(item => { platformWinnerCounts[item.record.platform] = (platformWinnerCounts[item.record.platform] || 0) + 1; });
-    const bestPlatform = Object.entries(platformWinnerCounts).sort((a,b) => b[1]-a[1])[0]?.[0];
-    const currentMonthKey = localDateKey().slice(0, 7);
-    const learnedThisMonth = experienceMemory.filter(item => String(item.learned_at).startsWith(currentMonthKey)).length;
-    const dataNote = performanceData.some(item => item.source !== 'demo') ? 'Demo / 用户数据' : '演示数据';
-    document.getElementById('performanceSourceBadge').textContent = dataNote;
+    const bestPlatform = Object.entries(platformWinnerCounts).sort((a,b) => b[1]-a[1])[0]?.[0], currentMonthKey = localDateKey().slice(0,7), learnedThisMonth = experienceMemory.filter(item => String(item.learned_at).startsWith(currentMonthKey)).length;
+    const dataNote = performanceData.some(item => item.source !== 'demo') ? 'Demo / 用户数据' : '演示数据'; document.getElementById('performanceSourceBadge').textContent = dataNote;
     const kpis = [['近30天发布',recent,dataNote],['高表现内容',winners,dataNote],['表现最佳平台',CHANNEL_PROFILES[bestPlatform]?.shortName || '—',dataNote],['本月新学经验',learnedThisMonth,dataNote]];
     document.getElementById('kpiGrid').innerHTML = kpis.map(([label,value,note]) => `<article class="kpi-card"><span>${escapeHTML(label)}</span><strong>${escapeHTML(value)}</strong><small>${escapeHTML(note)}</small></article>`).join('');
     document.getElementById('performanceTableBody').innerHTML = analyzed.map(({record,analysis}) => performanceRow(record,analysis)).join('');
@@ -1008,216 +770,95 @@
     document.querySelectorAll('[data-enter-performance]').forEach(button => button.addEventListener('click', () => openPerformanceEntry(button.dataset.enterPerformance)));
   }
   function performanceRow(record, analysis) {
-    const labels = { winner:'Winner', normal:'Normal', review:'Needs Review', waiting:'等待数据' };
-    const statusClass = { winner:'winner', normal:'normal', review:'review', waiting:'waiting' }[analysis.status];
-    return `<tr><td class="content-title-cell"><strong>${escapeHTML(record.title)}</strong><small>${escapeHTML(record.product)} · ${record.source === 'demo' ? '演示数据' : '用户数据'}</small></td><td><span class="platform-pill">${escapeHTML(CHANNEL_PROFILES[record.platform]?.shortName || record.platform)}</span></td><td>${formatDate(record.published_at)}</td><td>${analysis.value === null ? '—' : `${metricLabel(analysis.metric)} ${formatMetricValue(analysis.metric,analysis.value)}`}</td><td class="${analysis.lift > 0 ? 'lift-up' : analysis.lift < 0 ? 'lift-down' : ''}">${analysis.lift === null ? '—' : `${analysis.lift >= 0 ? '+' : ''}${Math.round(analysis.lift)}%`}</td><td><span class="status-pill ${statusClass}">${labels[analysis.status]}</span></td><td>${analysis.status === 'waiting' ? `<button class="button button-ghost" type="button" data-enter-performance="${record.id}">录入表现</button>` : `<button class="button button-ghost" type="button" data-view-winner="${record.id}">${analysis.status === 'winner' ? '查看复盘' : '查看详情'}</button>`}</td></tr>`;
+    const labels = {winner:'Winner',normal:'Normal',review:'Needs Review',waiting:'等待数据',insufficient:'样本不足'}, statusClass = analysis.status;
+    const compareText = analysis.status === 'insufficient' ? `仅 ${analysis.baselineCount} 条可比历史` : formatLift(analysis);
+    return `<tr><td class="content-title-cell"><strong>${escapeHTML(record.title)}</strong><small>${escapeHTML(record.product)} · ${record.source === 'demo' ? '演示数据' : '用户数据'}</small></td><td><span class="platform-pill">${escapeHTML(CHANNEL_PROFILES[record.platform]?.shortName || record.platform)}</span></td><td>${formatDate(record.published_at)}</td><td>${analysis.value === null ? '—' : `${metricLabel(analysis.metric)} ${formatMetricValue(analysis.metric,analysis.value)}`}</td><td class="${Number.isFinite(analysis.lift) && analysis.lift > 0 ? 'lift-up' : Number.isFinite(analysis.lift) && analysis.lift < 0 ? 'lift-down' : ''}">${compareText}</td><td><span class="status-pill ${statusClass}">${labels[analysis.status]}</span></td><td>${analysis.status === 'waiting' ? `<button class="button button-ghost" type="button" data-enter-performance="${record.id}">录入表现</button>` : `<button class="button button-ghost" type="button" data-view-winner="${record.id}">${analysis.status === 'winner' ? '查看复盘' : '查看详情'}</button>`}</td></tr>`;
   }
   function mobilePerformanceCard(record, analysis) {
-    const labels = { winner:'Winner', normal:'Normal', review:'Needs Review', waiting:'等待数据' };
-    return `<article class="mobile-perf-card"><div><strong>${escapeHTML(record.title)}</strong><span class="status-pill ${analysis.status}">${labels[analysis.status]}</span></div><p>${escapeHTML(CHANNEL_PROFILES[record.platform]?.name || record.platform)} · ${formatDate(record.published_at)} · ${analysis.value === null ? '等待数据' : `${metricLabel(analysis.metric)} ${formatMetricValue(analysis.metric,analysis.value)}`}</p><footer><span class="${analysis.lift > 0 ? 'lift-up' : analysis.lift < 0 ? 'lift-down' : ''}">${analysis.lift === null ? '—' : `${analysis.lift >= 0 ? '+' : ''}${Math.round(analysis.lift)}% vs 基线`}</span>${analysis.status === 'waiting' ? `<button class="button button-ghost" type="button" data-enter-performance="${record.id}">录入</button>` : `<button class="button button-ghost" type="button" data-view-winner="${record.id}">查看</button>`}</footer></article>`;
+    const labels = {winner:'Winner',normal:'Normal',review:'Needs Review',waiting:'等待数据',insufficient:'样本不足'};
+    const compareText = analysis.status === 'insufficient' ? `仅 ${analysis.baselineCount} 条可比历史` : `${formatLift(analysis)} vs 基线`;
+    return `<article class="mobile-perf-card"><div><strong>${escapeHTML(record.title)}</strong><span class="status-pill ${analysis.status}">${labels[analysis.status]}</span></div><p>${escapeHTML(CHANNEL_PROFILES[record.platform]?.name || record.platform)} · ${formatDate(record.published_at)} · ${analysis.value === null ? '等待数据' : `${metricLabel(analysis.metric)} ${formatMetricValue(analysis.metric,analysis.value)}`}</p><footer><span class="${Number.isFinite(analysis.lift) && analysis.lift > 0 ? 'lift-up' : Number.isFinite(analysis.lift) && analysis.lift < 0 ? 'lift-down' : ''}">${compareText}</span>${analysis.status === 'waiting' ? `<button class="button button-ghost" type="button" data-enter-performance="${record.id}">录入</button>` : `<button class="button button-ghost" type="button" data-view-winner="${record.id}">查看</button>`}</footer></article>`;
   }
 
   function openPerformanceEntry(recordId) {
-    const record = performanceData.find(item => item.id === recordId);
-    const profile = record && CHANNEL_PROFILES[record.platform];
-    if (!record || !profile) return;
-    selectedPerformanceId = recordId;
-    document.getElementById('performanceEntryMeta').textContent = `${record.title} · ${profile.name}`;
-    document.getElementById('metricEntryFields').innerHTML = performanceEntryMetrics(record, profile).map(metric => `<label class="field"><span>${escapeHTML(metricLabel(metric))}${metric === profile.goalMetrics[record.goal] ? ' · 核心' : ''}</span><input type="number" min="0" ${metric.includes('rate') ? 'max="100"' : ''} step="${metric.includes('rate') ? '0.1' : '1'}" name="metric-${metric}" value="${Number.isFinite(record.metrics?.[metric]) ? record.metrics[metric] : ''}" placeholder="未提供"></label>`).join('');
-    openDialog('performanceModal');
+    const record = performanceData.find(item => item.id === recordId), profile = record && CHANNEL_PROFILES[record.platform]; if (!record || !profile) return;
+    selectedPerformanceId = recordId; document.getElementById('performanceEntryMeta').textContent = `${record.title} · ${profile.name}`;
+    document.getElementById('metricEntryFields').innerHTML = performanceEntryMetrics(record,profile).map(metric => `<label class="field"><span>${escapeHTML(metricLabel(metric))}${metric === profile.goalMetrics[record.goal] ? ' · 核心' : ''}</span><input type="number" min="0" ${metric.includes('rate') ? 'max="100"' : ''} step="${metric.includes('rate') ? '0.1' : '1'}" name="metric-${metric}" value="${Number.isFinite(record.metrics?.[metric]) ? record.metrics[metric] : ''}" placeholder="未提供"></label>`).join(''); openDialog('performanceModal');
   }
-
-  function performanceEntryMetrics(record, profile) {
-    return [...new Set([...profile.availableMetrics, profile.goalMetrics[record.goal]].filter(Boolean))];
-  }
-
+  function performanceEntryMetrics(record, profile) { return [...new Set([...profile.availableMetrics,profile.goalMetrics[record.goal]].filter(Boolean))]; }
   function parsePerformanceMetric(metric, raw) {
-    if (raw === undefined || raw === null || raw === '') return null;
-    const value = Number(raw);
-    const isRate = metric.includes('rate') || metric === 'ctr';
-    if (!Number.isFinite(value) || value < 0 || (isRate && value > 100) || (!isRate && !Number.isInteger(value))) {
-      throw new Error(`${metricLabel(metric)}的数据格式无效${isRate ? '，比例应在 0–100 之间' : '，数量应为非负整数'}`);
-    }
-    return value;
+    if (raw === undefined || raw === null || raw === '') return null; const value = Number(raw), isRate = metric.includes('rate') || metric === 'ctr';
+    if (!Number.isFinite(value) || value < 0 || (isRate && value > 100) || (!isRate && !Number.isInteger(value))) throw new Error(`${metricLabel(metric)}的数据格式无效${isRate ? '，比例应在 0–100 之间' : '，数量应为非负整数'}`); return value;
   }
-
   function savePerformanceEntry(event) {
-    event.preventDefault();
-    const record = performanceData.find(item => item.id === selectedPerformanceId);
-    const profile = record && CHANNEL_PROFILES[record.platform];
-    if (!record || !profile) return;
-    const metrics = {};
-    let entered = 0;
-    try {
-      performanceEntryMetrics(record, profile).forEach(metric => {
-        const value = document.querySelector(`[name="metric-${metric}"]`).value;
-        metrics[metric] = parsePerformanceMetric(metric, value);
-        if (Number.isFinite(metrics[metric])) entered++;
-      });
-    } catch (error) { toast(error.message); return; }
+    event.preventDefault(); const record = performanceData.find(item => item.id === selectedPerformanceId), profile = record && CHANNEL_PROFILES[record.platform]; if (!record || !profile) return;
+    const metrics = {}; let entered = 0;
+    try { performanceEntryMetrics(record,profile).forEach(metric => { const value = document.querySelector(`[name="metric-${metric}"]`).value; metrics[metric] = parsePerformanceMetric(metric,value); if (Number.isFinite(metrics[metric])) entered++; }); }
+    catch (error) { toast(error.message); return; }
     if (!entered) { toast('请至少录入一个实际指标'); return; }
-    record.metrics = metrics;
-    record.source = 'manual';
-    ensureRecordPattern(record);
-    saveJSON(STORAGE.performance, performanceData);
-    closeDialog('performanceModal');
-    renderPerformance();
-    toast('内容表现已保存，已重新计算同平台基线');
+    record.metrics = metrics; record.source = 'manual'; ensureRecordPattern(record); saveJSON(STORAGE.performance,performanceData); closeDialog('performanceModal'); renderPerformance(); toast('内容表现已保存，已重新计算同平台同目标历史基线');
   }
-
   async function importPerformanceCSV(event) {
-    const file = event.target.files[0];
-    if (!file) return;
+    const file = event.target.files[0]; if (!file) return;
     try {
-      const rows = parseCSV(await file.text());
-      const updates = [];
+      const rows = parseCSV(await file.text()), updates = [];
       rows.forEach(row => {
-        const platformAliases = { 小红书:'xiaohongshu', 抖音:'douyin', 微信:'wechat', 微信公众号:'wechat' };
-        const record = performanceData.find(item => item.id === row.id) || performanceData.find(item => item.title === row.title && item.platform === (platformAliases[row.platform] || row.platform));
-        if (!record || !CHANNEL_PROFILES[record.platform]) return;
-        const metrics = {};
-        let hasMetric = false;
-        performanceEntryMetrics(record, CHANNEL_PROFILES[record.platform]).forEach(metric => {
-          const raw = row[metric];
-          metrics[metric] = parsePerformanceMetric(metric, raw);
-          if (Number.isFinite(metrics[metric])) hasMetric = true;
-        });
-        if (hasMetric) updates.push({ record, metrics });
+        const aliases = {小红书:'xiaohongshu',抖音:'douyin',微信:'wechat',微信公众号:'wechat'};
+        const record = performanceData.find(item => item.id === row.id) || performanceData.find(item => item.title === row.title && item.platform === (aliases[row.platform] || row.platform)); if (!record || !CHANNEL_PROFILES[record.platform]) return;
+        const metrics = {}; let hasMetric = false;
+        performanceEntryMetrics(record,CHANNEL_PROFILES[record.platform]).forEach(metric => { metrics[metric] = parsePerformanceMetric(metric,row[metric]); if (Number.isFinite(metrics[metric])) hasMetric = true; }); if (hasMetric) updates.push({record,metrics});
       });
       if (!updates.length) throw new Error('没有匹配到可更新的内容。请提供 id，或同时提供 title 与 platform。');
-      updates.forEach(({ record, metrics }) => { record.metrics = metrics; record.source = 'csv'; ensureRecordPattern(record); });
-      saveJSON(STORAGE.performance, performanceData); renderPerformance(); toast(`已从 CSV 更新 ${updates.length} 条内容表现`);
+      updates.forEach(({record,metrics}) => { record.metrics = metrics; record.source = 'csv'; ensureRecordPattern(record); }); saveJSON(STORAGE.performance,performanceData); renderPerformance(); toast(`已从 CSV 更新 ${updates.length} 条内容表现`);
     } catch (error) { toast(error.message || 'CSV 导入失败'); }
     finally { event.target.value = ''; }
   }
 
   function openWinnerDetail(recordId) {
-    const record = performanceData.find(item => item.id === recordId);
-    if (!record) return;
-    ensureRecordPattern(record);
-    selectedWinnerId = recordId;
-    const analysis = analyzePerformance(record);
-    document.getElementById('winnerKicker').textContent = analysis.status === 'winner' ? 'Winner 详情' : '内容详情';
-    document.getElementById('winnerTitle').textContent = record.title;
+    const record = performanceData.find(item => item.id === recordId); if (!record) return; ensureRecordPattern(record); selectedWinnerId = recordId;
+    const analysis = analyzePerformance(record); document.getElementById('winnerKicker').textContent = analysis.status === 'winner' ? 'Winner 详情' : '内容详情'; document.getElementById('winnerTitle').textContent = record.title;
     document.getElementById('winnerMeta').textContent = `${CHANNEL_PROFILES[record.platform].name} · ${GOALS[record.goal]} · ${record.source === 'demo' ? '演示数据' : '用户数据'}`;
-    document.getElementById('winnerBody').innerHTML = `<div class="winner-metrics"><div class="winner-metric"><span>${metricLabel(analysis.metric)}</span><strong>${formatMetricValue(analysis.metric,analysis.value)}</strong></div><div class="winner-metric"><span>近期中位数</span><strong>${formatMetricValue(analysis.metric,analysis.baseline)}</strong></div><div class="winner-metric"><span>相比历史</span><strong class="${analysis.lift >= 0 ? 'lift-up' : 'lift-down'}">${analysis.lift >= 0 ? '+' : ''}${Math.round(analysis.lift)}%</strong></div></div><div class="analysis-block"><h3>AI 复盘</h3><div class="analysis-grid"><div class="analysis-item"><b>Hook</b><p>${escapeHTML(record.pattern.hook)}</p></div><div class="analysis-item"><b>内容结构</b><p>${escapeHTML(record.pattern.structure)}</p></div><div class="analysis-item"><b>表达方式</b><p>${escapeHTML(record.pattern.expression)}</p></div><div class="analysis-item"><b>适用范围</b><p>${escapeHTML(record.pattern.scope)}</p></div></div></div>`;
-    const learned = experienceMemory.some(item => item.source_content_id === record.id);
-    const button = document.getElementById('learnExperienceButton');
-    button.disabled = learned || analysis.status !== 'winner';
-    button.textContent = learned ? '已学习' : analysis.status === 'winner' ? '加入创作经验' : '仅高表现内容可加入经验';
-    openDialog('winnerModal');
+    const baselineNote = analysis.status === 'waiting' ? '尚未录入可用于当前目标的核心表现指标。' : analysis.status === 'insufficient' ? `当前仅有 ${analysis.baselineCount} 条“同平台 + 相同内容目标”的其他历史内容；至少需要 ${MIN_BASELINE_PEERS} 条才判断 Winner，因此不会写入创作经验。` : `基线使用 ${analysis.baselineCount} 条“同平台 + 相同内容目标”的其他历史内容计算，中位数与 Top 20% 均明确排除当前内容本身。`;
+    document.getElementById('winnerBody').innerHTML = `<div class="winner-metrics"><div class="winner-metric"><span>${metricLabel(analysis.metric)}</span><strong>${formatMetricValue(analysis.metric,analysis.value)}</strong></div><div class="winner-metric"><span>历史中位数</span><strong>${formatMetricValue(analysis.metric,analysis.baseline)}</strong></div><div class="winner-metric"><span>相比历史</span><strong class="${Number.isFinite(analysis.lift) && analysis.lift >= 0 ? 'lift-up' : Number.isFinite(analysis.lift) ? 'lift-down' : ''}">${formatLift(analysis)}</strong></div></div><div class="analysis-block"><h3>比较口径</h3><p>${escapeHTML(baselineNote)}</p></div><div class="analysis-block"><h3>AI 复盘</h3><div class="analysis-grid"><div class="analysis-item"><b>Hook</b><p>${escapeHTML(record.pattern.hook)}</p></div><div class="analysis-item"><b>内容结构</b><p>${escapeHTML(record.pattern.structure)}</p></div><div class="analysis-item"><b>表达方式</b><p>${escapeHTML(record.pattern.expression)}</p></div><div class="analysis-item"><b>适用范围</b><p>${escapeHTML(record.pattern.scope)}</p></div></div></div>`;
+    const learned = experienceMemory.some(item => item.source_content_id === record.id), button = document.getElementById('learnExperienceButton'); button.disabled = learned || analysis.status !== 'winner';
+    button.textContent = learned ? '已学习' : analysis.status === 'winner' ? '加入创作经验' : analysis.status === 'insufficient' ? '样本不足，暂不沉淀经验' : '仅高表现内容可加入经验'; openDialog('winnerModal');
   }
   function learnSelectedWinner() {
-    const record = performanceData.find(item => item.id === selectedWinnerId);
-    if (!record || experienceMemory.some(item => item.source_content_id === record.id)) return;
-    const analysis = analyzePerformance(record);
-    if (analysis.status !== 'winner') return;
-    experienceMemory.unshift({
-      id:uid('experience'), platform:record.platform, product_category:record.product_category, campaign_goal:record.goal,
-      content_pattern:record.pattern.hook, insight:`${record.pattern.structure}；${record.pattern.expression}。在同平台、相同内容目标下表现较好。`,
-      source_content_id:record.id, source_campaign:record.title, metric_name:analysis.metric, metric_value:analysis.value, baseline_value:analysis.baseline, lift:Math.round(analysis.lift), learned_at:localDateKey()
-    });
-    saveJSON(STORAGE.experience, experienceMemory); updateMemoryCounts(); renderMemory(); renderPerformance(); openWinnerDetail(record.id);
-    toast('已加入创作经验，下次生成相似内容时会自动参考');
+    const record = performanceData.find(item => item.id === selectedWinnerId); if (!record || experienceMemory.some(item => item.source_content_id === record.id)) return;
+    const analysis = analyzePerformance(record); if (analysis.status !== 'winner') return;
+    experienceMemory.unshift({ id:uid('experience'), platform:record.platform, product_category:record.product_category, campaign_goal:record.goal, content_pattern:record.pattern.hook, insight:`${record.pattern.structure}；${record.pattern.expression}。在同平台、相同内容目标下表现较好。`, source_content_id:record.id, source_campaign:record.title, metric_name:analysis.metric, metric_value:analysis.value, baseline_value:analysis.baseline, lift:Math.round(analysis.lift), baseline_count:analysis.baselineCount, learned_at:localDateKey() });
+    saveJSON(STORAGE.experience,experienceMemory); updateMemoryCounts(); renderMemory(); renderPerformance(); openWinnerDetail(record.id); toast('已加入创作经验，下次生成相似内容时会自动参考');
   }
 
-  function switchImportTab(tab) {
-    activeImportTab = tab;
-    document.querySelectorAll('[data-import-tab]').forEach(button => button.classList.toggle('is-active', button.dataset.importTab === tab));
-    document.querySelectorAll('[data-import-panel]').forEach(panel => panel.classList.toggle('is-active', panel.dataset.importPanel === tab));
-    document.getElementById('importFeedback').hidden = true;
-  }
-  function prepareMaterialModal() {
-    switchImportTab('manual');
-    ['materialTitle','materialText','pastedMaterial'].forEach(id => { document.getElementById(id).value = ''; });
-    document.getElementById('materialFile').value = '';
-    document.getElementById('materialFileName').textContent = '尚未选择文件';
-    const feedback = document.getElementById('importFeedback');
-    feedback.hidden = true;
-    feedback.removeAttribute('style');
-    openDialog('materialModal');
-  }
+  function switchImportTab(tab) { activeImportTab = tab; document.querySelectorAll('[data-import-tab]').forEach(button => button.classList.toggle('is-active',button.dataset.importTab === tab)); document.querySelectorAll('[data-import-panel]').forEach(panel => panel.classList.toggle('is-active',panel.dataset.importPanel === tab)); document.getElementById('importFeedback').hidden = true; }
+  function prepareMaterialModal() { switchImportTab('manual'); ['materialTitle','materialText','pastedMaterial'].forEach(id => { document.getElementById(id).value = ''; }); document.getElementById('materialFile').value = ''; document.getElementById('materialFileName').textContent = '尚未选择文件'; const feedback = document.getElementById('importFeedback'); feedback.hidden = true; feedback.removeAttribute('style'); openDialog('materialModal'); }
   async function saveMaterial() {
     try {
       let records = [];
-      if (activeImportTab === 'manual') {
-        const type = document.getElementById('materialType').value;
-        const title = document.getElementById('materialTitle').value.trim();
-        const content = document.getElementById('materialText').value.trim();
-        if (!title || !content) throw new Error('请填写标题和内容');
-        records = [{ type, title, content }];
-      } else if (activeImportTab === 'paste') {
-        const text = document.getElementById('pastedMaterial').value.trim();
-        if (!text) throw new Error('请先粘贴资料');
-        try { const parsed = JSON.parse(text); records = Array.isArray(parsed) ? parsed : (Array.isArray(parsed.records) ? parsed.records : [parsed]); }
-        catch (_) { records = [{ type:'brand', title:'粘贴资料', content:text }]; }
-      } else {
-        const file = document.getElementById('materialFile').files[0];
-        if (!file) throw new Error('请选择 JSON 或 CSV 文件');
-        const text = await file.text();
-        if (file.name.toLowerCase().endsWith('.json')) { const parsed = JSON.parse(text); records = Array.isArray(parsed) ? parsed : (Array.isArray(parsed.records) ? parsed.records : [parsed]); }
-        else records = parseCSV(text);
-      }
-      const count = importRecords(records);
-      if (!count) throw new Error('没有识别到可导入的资料');
-      saveJSON(STORAGE.brand, brandMemory); saveJSON(STORAGE.experience, experienceMemory);
-      renderProductOptions(); renderMemory(); updateMemoryCounts();
-      const feedback = document.getElementById('importFeedback'); feedback.hidden = false; feedback.textContent = `已保存 ${count} 条资料。`;
-      toast(`已保存 ${count} 条资料`);
-      setTimeout(() => closeDialog('materialModal'), 500);
-    } catch (error) {
-      const feedback = document.getElementById('importFeedback'); feedback.hidden = false; feedback.style.background = 'var(--danger-soft)'; feedback.style.color = 'var(--danger)'; feedback.textContent = error.message;
-    }
+      if (activeImportTab === 'manual') { const type = document.getElementById('materialType').value, title = document.getElementById('materialTitle').value.trim(), content = document.getElementById('materialText').value.trim(); if (!title || !content) throw new Error('请填写标题和内容'); records = [{type,title,content}]; }
+      else if (activeImportTab === 'paste') { const text = document.getElementById('pastedMaterial').value.trim(); if (!text) throw new Error('请先粘贴资料'); try { const parsed = JSON.parse(text); records = Array.isArray(parsed) ? parsed : (Array.isArray(parsed.records) ? parsed.records : [parsed]); } catch (_) { records = [{type:'brand',title:'粘贴资料',content:text}]; } }
+      else { const file = document.getElementById('materialFile').files[0]; if (!file) throw new Error('请选择 JSON 或 CSV 文件'); const text = await file.text(); if (file.name.toLowerCase().endsWith('.json')) { const parsed = JSON.parse(text); records = Array.isArray(parsed) ? parsed : (Array.isArray(parsed.records) ? parsed.records : [parsed]); } else records = parseCSV(text); }
+      const count = importRecords(records); if (!count) throw new Error('没有识别到可导入的资料'); saveJSON(STORAGE.brand,brandMemory); saveJSON(STORAGE.experience,experienceMemory); renderProductOptions(); renderMemory(); updateMemoryCounts(); const feedback = document.getElementById('importFeedback'); feedback.hidden = false; feedback.textContent = `已保存 ${count} 条资料。`; toast(`已保存 ${count} 条资料`); setTimeout(() => closeDialog('materialModal'),500);
+    } catch (error) { const feedback = document.getElementById('importFeedback'); feedback.hidden = false; feedback.style.background = 'var(--danger-soft)'; feedback.style.color = 'var(--danger)'; feedback.textContent = error.message; }
   }
   function importRecords(records) {
     let count = 0;
     records.forEach(record => {
       const type = String(record.type || record.category || 'brand').toLowerCase();
       if (type === 'product' && (record.name || record.title)) {
-        const name = record.name || record.title;
-        brandMemory.products.push({ id:uid('product'), name, category:record.product_category || record.productCategory || '待补充', description:record.description || record.content || record.value || '待补充', sellingPoints:asArray(record.sellingPoints || record.selling_points), specification:record.specification || '待补充', serving:record.serving || '待补充', scenarios:asArray(record.scenarios), usableFacts:asArray(record.usableFacts || record.usable_facts || record.content || record.value), forbiddenInference:asArray(record.forbiddenInference || record.forbidden_inference || '医疗、营养及绝对化功效'), source:record.source || '用户导入' }); count++;
+        const name = record.name || record.title; brandMemory.products.push({ id:uid('product'), name, category:record.product_category || record.productCategory || '待补充', description:record.description || record.content || record.value || '待补充', sellingPoints:asArray(record.sellingPoints || record.selling_points), specification:record.specification || '待补充', serving:record.serving || '待补充', scenarios:asArray(record.scenarios), usableFacts:asArray(record.usableFacts || record.usable_facts || record.content || record.value), forbiddenInference:asArray(record.forbiddenInference || record.forbidden_inference || '医疗、营养及绝对化功效'), source:record.source || '用户导入' }); count++;
       } else if (type === 'experience' && (record.content_pattern || record.title)) {
-        const metricValue = Number(record.metric_value);
-        const baselineValue = Number(record.baseline_value);
-        const lift = Number.isFinite(Number(record.lift)) ? Number(record.lift) : (baselineValue > 0 ? (metricValue - baselineValue) / baselineValue * 100 : 0);
-        if (CHANNEL_PROFILES[record.platform] && record.product_category && record.campaign_goal && metricValue > baselineValue && baselineValue > 0 && lift > 0) {
-          experienceMemory.unshift({ id:uid('experience'), platform:record.platform, product_category:record.product_category, campaign_goal:record.campaign_goal, content_pattern:record.content_pattern || record.title, insight:record.insight || record.content || record.value || '用户导入的创作经验', source_content_id:record.source_content_id || uid('import-source'), source_campaign:record.source_campaign || '用户导入', metric_name:record.metric_name || CHANNEL_PROFILES[record.platform].goalMetrics[record.campaign_goal], metric_value:metricValue, baseline_value:baselineValue, lift, learned_at:record.learned_at || localDateKey() }); count++;
-        }
+        const metricValue = Number(record.metric_value), baselineValue = Number(record.baseline_value), lift = Number.isFinite(Number(record.lift)) ? Number(record.lift) : (baselineValue > 0 ? (metricValue-baselineValue)/baselineValue*100 : 0);
+        if (CHANNEL_PROFILES[record.platform] && record.product_category && record.campaign_goal && metricValue > baselineValue && baselineValue > 0 && lift > 0) { experienceMemory.unshift({ id:uid('experience'), platform:record.platform, product_category:record.product_category, campaign_goal:record.campaign_goal, content_pattern:record.content_pattern || record.title, insight:record.insight || record.content || record.value || '用户导入的创作经验', source_content_id:record.source_content_id || uid('import-source'), source_campaign:record.source_campaign || '用户导入', metric_name:record.metric_name || CHANNEL_PROFILES[record.platform].goalMetrics[record.campaign_goal], metric_value:metricValue, baseline_value:baselineValue, lift, learned_at:record.learned_at || localDateKey() }); count++; }
       } else {
-        const title = record.title || record.key || record.name;
-        const content = record.content || record.value || record.description;
-        if (title && content) { brandMemory.customFacts = brandMemory.customFacts || []; brandMemory.customFacts.push({ id:uid('brand-fact'), title, content, source:record.source || '用户导入' }); count++; }
+        const title = record.title || record.key || record.name, content = record.content || record.value || record.description; if (title && content) { brandMemory.customFacts = brandMemory.customFacts || []; brandMemory.customFacts.push({id:uid('brand-fact'),title,content,source:record.source || '用户导入'}); count++; }
       }
-    });
-    return count;
+    }); return count;
   }
-  function asArray(value) {
-    if (Array.isArray(value)) return value;
-    return String(value || '待补充').split(/[|；;]/).map(item => item.trim()).filter(Boolean);
-  }
-  function parseCSV(text) {
-    const lines = text.trim().split(/\r?\n/).filter(Boolean);
-    if (lines.length < 2) return [];
-    const headers = parseCSVLine(lines[0]);
-    return lines.slice(1).map(line => { const values = parseCSVLine(line); return Object.fromEntries(headers.map((header,index) => [header.trim(), values[index]?.trim() || ''])); });
-  }
-  function parseCSVLine(line) {
-    const values = []; let current = '', quoted = false;
-    for (let index=0; index<line.length; index++) {
-      const char = line[index];
-      if (char === '"' && line[index+1] === '"' && quoted) { current += '"'; index++; }
-      else if (char === '"') quoted = !quoted;
-      else if (char === ',' && !quoted) { values.push(current); current = ''; }
-      else current += char;
-    }
-    values.push(current); return values;
-  }
-
-  function toast(message) {
-    const region = document.getElementById('toastRegion');
-    const element = document.createElement('div'); element.className = 'toast'; element.textContent = message; region.appendChild(element);
-    setTimeout(() => element.remove(), 2800);
-  }
+  function asArray(value) { if (Array.isArray(value)) return value; return String(value || '待补充').split(/[|；;]/).map(item => item.trim()).filter(Boolean); }
+  function parseCSV(text) { const lines = text.trim().split(/\r?\n/).filter(Boolean); if (lines.length < 2) return []; const headers = parseCSVLine(lines[0]); return lines.slice(1).map(line => { const values = parseCSVLine(line); return Object.fromEntries(headers.map((header,index) => [header.trim(),values[index]?.trim() || ''])); }); }
+  function parseCSVLine(line) { const values = []; let current = '', quoted = false; for (let index=0; index<line.length; index++) { const char = line[index]; if (char === '"' && line[index+1] === '"' && quoted) { current += '"'; index++; } else if (char === '"') quoted = !quoted; else if (char === ',' && !quoted) { values.push(current); current = ''; } else current += char; } values.push(current); return values; }
+  function toast(message) { const region = document.getElementById('toastRegion'); const element = document.createElement('div'); element.className = 'toast'; element.textContent = message; region.appendChild(element); setTimeout(() => element.remove(),2800); }
 
   document.addEventListener('DOMContentLoaded', init);
 })();
