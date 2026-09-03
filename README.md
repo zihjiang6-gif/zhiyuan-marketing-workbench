@@ -46,7 +46,7 @@ Learning
 4. 编辑任意内容并保存，查看新增版本；
 5. 确认定稿，再标记已发布；
 6. 在“效果复盘”中看到刚发布的内容显示“等待数据”；
-7. 打开一条历史 Winner，查看指标、近期中位数、Lift 与 AI 复盘；
+7. 打开一条历史 Winner，查看指标、历史中位数、Lift、比较口径与 AI 复盘；
 8. 点击“加入创作经验”；
 9. 在“品牌记忆 → 创作经验”查看新经验；
 10. 回到内容创作，再次生成相似 Campaign，查看该经验已进入创作参考。
@@ -60,16 +60,20 @@ Learning
 - 内容编辑、复制、单平台重新生成与轻量版本记录；
 - 发布前产品事实、品牌表达、食品宣传合规、平台格式检查；
 - Supported / Subjective / Unsupported / Risky 宣称分类思路；
+- 对客观产品宣称要求可核验产品资料，无法找到依据时进入 Unsupported；
 - 草稿 → 已定稿 → 已发布状态；
 - Markdown 内容导出；
 - 发布记录与“等待数据”状态；
 - 已发布内容的手动表现录入与 CSV 批量补数；
 - 12 条跨平台历史 Performance 演示数据；
 - 由 Campaign Goal 和 Channel Profile 选择核心指标；
-- 同平台、相同 Goal 下的近期中位数与高表现判断；
+- 同平台、相同 Goal 下的历史中位数与高表现判断；
+- Winner 基线明确排除当前内容本身，避免自包含基线；
+- 可比历史不足 3 条时显示“样本不足”，不判 Winner、不沉淀经验；
 - Winner 详情、内容规律提炼、人工加入创作经验；
 - 按平台、产品类别、Campaign Goal 和文本关键词检索经验；
 - 下一轮生成明确展示所引用的历史经验；
+- 约 20% 生成轮次进入探索模式：完全不引用 Experience Memory，只使用品牌、产品与平台规则；
 - 手动输入、粘贴文本、上传 JSON / CSV；
 - 新版 `zhiyuan_*` localStorage Key 与旧 Key 安全迁移备份；
 - 刷新后保留 Brief、生成内容、版本、发布内容和经验。
@@ -93,7 +97,7 @@ Campaign Brief
   + Brand Knowledge
   + Product Facts
   + Channel Profile
-  + Relevant Experience
+  + Relevant Experience（利用轮次）
         ↓
   Generation Simulation
         ↓
@@ -110,7 +114,7 @@ Campaign Brief
   Experience Memory
 ```
 
-生成策略保留约 20% 的探索空间：历史经验始终作为参考，而不是固定模板；系统会弱化部分历史模式，避免只会重复 Winner。
+生成策略保留约 20% 的探索空间：约 80% 的轮次正常检索相关 Experience；约 20% 的轮次完全不引用历史 Experience，只使用 Brand Knowledge、Product Facts 与 Channel Profile，避免系统只会复制旧 Winner。这里的探索/利用只是生成策略，不代表模型训练或在线强化学习。
 
 ## Performance 与 Winner
 
@@ -122,7 +126,9 @@ Campaign Brief
 | 抖音 | 播放、点赞、评论、分享、完播率 | Awareness 看播放；Consideration 看完播率 |
 | 微信公众号 | 阅读、分享、完读率 | Awareness 看阅读；Engagement 看分享率 |
 
-Winner 不使用固定绝对阈值。当前 Prototype 在“同平台 + 相同 Goal”组内计算近期中位数、Top 20% 位置和 Lift，高于组内表现时才标为 Winner。
+Winner 不使用固定绝对阈值。当前 Prototype 对每条内容使用“同平台 + 相同 Goal”的**其他历史内容**作为对照集，明确排除当前内容本身，再计算历史中位数、Top 20% 位置和 Lift。可比历史少于 3 条时只展示“样本不足”，不会判定 Winner，也不会允许写入 Experience Memory。
+
+这套逻辑仍是作品集 Prototype 的相对比较启发式，而不是因果实验结论。它回答“这条内容相对可比历史表现是否突出”，不回答“某个内容元素是否导致了表现提升”。
 
 手动录入只展示对应平台可用指标，并额外展示当前 Goal 所需的核心指标（例如 Traffic 的 CTR、Conversion 的转化率）。CSV 可通过 `id` 匹配记录，或用 `title` + `platform` 匹配；指标列使用 Profile 中的英文键名，空白字段保持 `null`。
 
