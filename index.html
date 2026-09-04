@@ -21,7 +21,7 @@
       </nav>
       <div class="sidebar-foot">
         <div class="learning-status"><span class="status-dot"></span><span><strong id="memoryCount">0 条创作经验</strong><small>用于下一次内容生成</small></span></div>
-        <p>Prototype · 数据保存在本地浏览器</p>
+        <p>原型 · 数据保存在本地浏览器</p>
       </div>
     </aside>
 
@@ -33,12 +33,12 @@
     <main class="main-content">
       <section class="page is-active" id="page-create" data-page="create">
         <div class="page-header">
-          <div><p class="eyebrow">Create</p><h1>内容创作</h1><p>从一份 Brief 出发，生成适合不同平台的原生内容。</p></div>
+          <div><p class="eyebrow">创作工作流</p><h1>内容创作</h1><p>从一份内容简报出发，生成适合不同平台的原生内容。</p></div>
           <div class="campaign-state" id="campaignStateBadge"><span></span>草稿</div>
         </div>
 
         <div class="workflow-steps" aria-label="内容工作流">
-          <span class="is-current" data-workflow="draft"><b>1</b>Campaign Brief</span><i></i>
+          <span class="is-current" data-workflow="draft"><b>1</b>内容简报</span><i></i>
           <span data-workflow="generated"><b>2</b>生成与检查</span><i></i>
           <span data-workflow="final"><b>3</b>确认定稿</span><i></i>
           <span data-workflow="published"><b>4</b>标记已发布</span>
@@ -46,15 +46,15 @@
 
         <form class="surface brief-card" id="briefForm">
           <div class="section-heading">
-            <div><h2>Campaign Brief</h2><p>品牌表达会自动从品牌记忆中读取。</p></div>
-            <button class="text-button" type="button" id="loadDemoButton">载入演示 Brief</button>
+            <div><h2>内容简报</h2><p>品牌表达会自动从品牌记忆中读取。</p></div>
+            <button class="text-button" type="button" id="loadDemoButton">载入演示简报</button>
           </div>
           <div class="form-grid">
             <label class="field field-wide-product"><span>推广产品</span><select id="productInput" required></select></label>
             <label class="field"><span>这次要做什么</span><select id="taskInput"><option value="产品推广">产品推广</option><option value="新品上市">新品上市</option><option value="日常种草">日常种草</option><option value="节日营销">节日营销</option><option value="促销活动">促销活动</option><option value="品牌故事">品牌故事</option></select></label>
             <label class="field field-full"><span>这次主要想说什么</span><textarea id="briefInput" rows="4" maxlength="600" required></textarea><small><span id="briefCharCount">0</span>/600</small></label>
             <label class="field"><span>目标人群</span><input id="audienceInput" type="text" required></label>
-            <label class="field"><span>内容目标</span><select id="goalInput"><option value="awareness">曝光 / Awareness</option><option value="engagement">互动 / Engagement</option><option value="consideration">种草 / Consideration</option><option value="traffic">引流 / Traffic</option><option value="conversion">转化 / Conversion</option></select></label>
+            <label class="field"><span>内容目标</span><select id="goalInput"><option value="awareness">曝光</option><option value="engagement">互动</option><option value="consideration">种草</option><option value="traffic">引流</option><option value="conversion">转化</option></select></label>
           </div>
           <fieldset class="channel-fieldset"><legend>目标平台 <span>至少选择 1 个</span></legend><div class="channel-options" id="channelOptions"></div></fieldset>
           <div class="primary-action-row">
@@ -74,7 +74,7 @@
           </section>
 
           <section class="outputs-section">
-            <div class="section-heading output-heading"><div><h2>平台内容</h2><p>同一 Brief 会按各平台的内容结构和表达习惯分别生成。</p></div><button class="button button-secondary" type="button" id="exportButton"><svg viewBox="0 0 24 24"><path d="M12 3v12m0 0 4-4m-4 4-4-4"/><path d="M5 17v3h14v-3"/></svg>导出内容</button></div>
+            <div class="section-heading output-heading"><div><h2>平台内容</h2><p>同一份内容简报会按各平台的内容结构和表达习惯分别生成。</p></div><button class="button button-secondary" type="button" id="exportButton"><svg viewBox="0 0 24 24"><path d="M12 3v12m0 0 4-4m-4 4-4-4"/><path d="M5 17v3h14v-3"/></svg>导出内容</button></div>
             <div class="platform-tabs" id="platformTabs" role="tablist"></div><div id="platformPanels"></div>
           </section>
 
@@ -92,16 +92,16 @@
       </section>
 
       <section class="page" id="page-memory" data-page="memory">
-        <div class="page-header with-action"><div><p class="eyebrow">Memory</p><h1>品牌记忆</h1><p>管理稳定的品牌事实、产品资料，以及从发布表现中沉淀的创作经验。</p></div><button class="button button-primary" type="button" id="addMaterialButton">＋ 添加资料</button></div>
+        <div class="page-header with-action"><div><p class="eyebrow">品牌资产</p><h1>品牌记忆</h1><p>管理稳定的品牌事实、产品资料，以及从发布表现中沉淀的创作经验。</p></div><button class="button button-primary" type="button" id="addMaterialButton">＋ 添加资料</button></div>
         <div class="memory-tabs" role="tablist"><button class="is-active" type="button" data-memory-tab="brand">品牌资料</button><button type="button" data-memory-tab="products">产品资料</button><button type="button" data-memory-tab="experience">创作经验 <span id="experienceTabCount">0</span></button></div>
         <div id="memoryContent"></div>
       </section>
 
       <section class="page" id="page-performance" data-page="performance">
-        <div class="page-header"><div><p class="eyebrow">Measure & Learn</p><h1>效果复盘</h1><p>在同平台、相同内容目标下建立历史基线，识别值得复用的创作方式。</p></div><span class="demo-chip" id="performanceSourceBadge">演示数据</span></div>
+        <div class="page-header"><div><p class="eyebrow">复盘学习</p><h1>效果复盘</h1><p>在同平台、相同内容目标下建立历史基线，识别值得复用的创作方式。</p></div><span class="demo-chip" id="performanceSourceBadge">演示数据</span></div>
         <div class="kpi-grid" id="kpiGrid"></div>
         <section class="surface performance-card">
-          <div class="section-heading"><div><h2>最近发布</h2><p>系统会根据内容目标和平台选择当前最重要的核心指标。</p></div><div class="section-actions"><span class="subtle-label">演示 / 手动录入</span><label class="button button-secondary file-button">导入表现 CSV<input id="performanceCsvFile" type="file" accept=".csv,text/csv"></label></div></div>
+          <div class="section-heading"><div><h2>最近发布</h2><p>系统会根据内容目标和平台选择当前最重要的核心指标。</p></div><div class="section-actions"><span class="subtle-label">演示数据 / 手动录入</span><label class="button button-secondary file-button">导入表现数据（CSV）<input id="performanceCsvFile" type="file" accept=".csv,text/csv"></label></div></div>
           <div class="table-wrap"><table class="content-table"><thead><tr><th>内容</th><th>平台</th><th>发布时间</th><th>核心表现</th><th>相对历史基线</th><th>状态</th><th></th></tr></thead><tbody id="performanceTableBody"></tbody></table></div>
           <div class="mobile-performance-list" id="mobilePerformanceList"></div>
         </section>
@@ -128,7 +128,7 @@
   </dialog>
 
   <dialog class="modal modal-wide" id="winnerModal">
-    <div class="modal-head"><div><span class="winner-kicker" id="winnerKicker">Winner 详情</span><h2 id="winnerTitle"></h2><p id="winnerMeta"></p></div><button class="icon-button" type="button" data-close-dialog="winnerModal" aria-label="关闭">×</button></div>
+    <div class="modal-head"><div><span class="winner-kicker" id="winnerKicker">高表现内容详情</span><h2 id="winnerTitle"></h2><p id="winnerMeta"></p></div><button class="icon-button" type="button" data-close-dialog="winnerModal" aria-label="关闭">×</button></div>
     <div class="modal-body" id="winnerBody"></div>
     <div class="modal-actions"><button class="button button-secondary" type="button" data-close-dialog="winnerModal">关闭</button><button class="button button-primary" type="button" id="learnExperienceButton">加入创作经验</button></div>
   </dialog>
@@ -136,15 +136,15 @@
   <dialog class="modal modal-wide" id="materialModal">
     <div class="modal-head"><div><h2>添加资料</h2><p>只需提供资料内容，内部检索字段由系统处理。</p></div><button class="icon-button" type="button" data-close-dialog="materialModal" aria-label="关闭">×</button></div>
     <div class="modal-body">
-      <div class="mini-tabs" id="materialTabs"><button class="is-active" type="button" data-import-tab="manual">手动输入</button><button type="button" data-import-tab="paste">粘贴文本</button><button type="button" data-import-tab="upload">上传 JSON / CSV</button></div>
+      <div class="mini-tabs" id="materialTabs"><button class="is-active" type="button" data-import-tab="manual">手动输入</button><button type="button" data-import-tab="paste">粘贴文本</button><button type="button" data-import-tab="upload">上传资料文件</button></div>
       <div class="import-panel is-active" data-import-panel="manual">
         <label class="field"><span>资料类型</span><select id="materialType"><option value="brand">品牌资料</option><option value="product">产品资料</option></select></label>
         <label class="field"><span>标题</span><input id="materialTitle" placeholder="例如：品牌表达风格"></label>
         <label class="field"><span>内容</span><textarea id="materialText" rows="5" placeholder="输入需要保存的资料"></textarea></label>
       </div>
-      <div class="import-panel" data-import-panel="paste"><label class="field"><span>粘贴文本或 JSON</span><textarea id="pastedMaterial" rows="9" placeholder="可以粘贴普通文本，也可以粘贴 JSON 数组"></textarea></label></div>
+      <div class="import-panel" data-import-panel="paste"><label class="field"><span>粘贴文本或结构化数据</span><textarea id="pastedMaterial" rows="9" placeholder="可以粘贴普通文本，也可以粘贴结构化数据"></textarea></label></div>
       <div class="import-panel" data-import-panel="upload">
-        <label class="upload-zone" for="materialFile"><svg viewBox="0 0 24 24"><path d="M12 16V4m0 0L8 8m4-4 4 4"/><path d="M4 14v5h16v-5"/></svg><strong>选择 JSON 或 CSV 文件</strong><span>支持 .json、.csv</span><input id="materialFile" type="file" accept=".json,.csv,application/json,text/csv"></label><p class="file-name" id="materialFileName">尚未选择文件</p>
+        <label class="upload-zone" for="materialFile"><svg viewBox="0 0 24 24"><path d="M12 16V4m0 0L8 8m4-4 4 4"/><path d="M4 14v5h16v-5"/></svg><strong>选择资料文件（JSON / CSV）</strong><span>支持 JSON、CSV 格式</span><input id="materialFile" type="file" accept=".json,.csv,application/json,text/csv"></label><p class="file-name" id="materialFileName">尚未选择文件</p>
       </div>
       <div class="import-feedback" id="importFeedback" hidden></div>
     </div>
