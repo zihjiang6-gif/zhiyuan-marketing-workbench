@@ -584,7 +584,7 @@
       <div class="reference-item"><strong>品牌资料</strong><p>${escapeHTML(brandMemory.brand.voice)}</p></div>
       <div class="reference-item"><strong>${escapeHTML(product.name)}产品资料</strong><p>${escapeHTML(product.usableFacts.join('；'))}</p></div>
       ${campaign.channels.map(channel => `<div class="reference-item"><strong>${escapeHTML(CHANNEL_PROFILES[channel].name)}内容规则</strong><p>${escapeHTML(CHANNEL_PROFILES[channel].rules.join('；'))}</p></div>`).join('')}
-      <div class="reference-item"><strong>${exploring ? '探索策略' : `历史经验 ${experienceItems.length} 条`}</strong>${exploring ? '<p>本轮主动不检索 Experience Memory，只使用品牌事实、产品事实与平台规则，用于保留新表达空间。</p>' : experienceItems.length ? experienceItems.map(item => `<div class="experience-reference"><b>${escapeHTML(item.content_pattern)}</b><span>${escapeHTML(item.insight)}</span></div>`).join('') : '<p>尚未找到与当前产品、平台和内容目标同时匹配的经验。</p>'}</div>
+      <div class="reference-item"><strong>${exploring ? '探索策略' : `历史经验 ${experienceItems.length} 条`}</strong>${exploring ? '<p>本轮主动不读取历史创作经验，只使用品牌事实、产品事实与平台规则，用于保留新表达空间。</p>' : experienceItems.length ? experienceItems.map(item => `<div class="experience-reference"><b>${escapeHTML(item.content_pattern)}</b><span>${escapeHTML(item.insight)}</span></div>`).join('') : '<p>尚未找到与当前产品、平台和内容目标同时匹配的经验。</p>'}</div>
     </div>`;
   }
   function getOutputFields(channel, output) {
@@ -761,8 +761,8 @@
     const recent = analyzed.filter(item => new Date(item.record.published_at) >= thirtyDaysAgo).length, winners = analyzed.filter(item => item.analysis.status === 'winner').length, platformWinnerCounts = {};
     analyzed.filter(item => item.analysis.status === 'winner').forEach(item => { platformWinnerCounts[item.record.platform] = (platformWinnerCounts[item.record.platform] || 0) + 1; });
     const bestPlatform = Object.entries(platformWinnerCounts).sort((a,b) => b[1]-a[1])[0]?.[0], currentMonthKey = localDateKey().slice(0,7), learnedThisMonth = experienceMemory.filter(item => String(item.learned_at).startsWith(currentMonthKey)).length;
-    const dataNote = performanceData.some(item => item.source !== 'demo') ? 'Demo / 用户数据' : '演示数据'; document.getElementById('performanceSourceBadge').textContent = dataNote;
-    const kpis = [['近30天发布',recent,dataNote],['高表现内容',winners,dataNote],['表现最佳平台',CHANNEL_PROFILES[bestPlatform]?.shortName || '—',dataNote],['本月新学经验',learnedThisMonth,dataNote]];
+    const dataNote = performanceData.some(item => item.source !== 'demo') ? '演示数据 / 用户数据' : '演示数据'; document.getElementById('performanceSourceBadge').textContent = dataNote;
+    const kpis = [['近30天发布',recent,dataNote],['高表现内容',winners,dataNote],['高表现内容最多平台',CHANNEL_PROFILES[bestPlatform]?.shortName || '—',dataNote],['本月新学经验',learnedThisMonth,dataNote]];
     document.getElementById('kpiGrid').innerHTML = kpis.map(([label,value,note]) => `<article class="kpi-card"><span>${escapeHTML(label)}</span><strong>${escapeHTML(value)}</strong><small>${escapeHTML(note)}</small></article>`).join('');
     document.getElementById('performanceTableBody').innerHTML = analyzed.map(({record,analysis}) => performanceRow(record,analysis)).join('');
     document.getElementById('mobilePerformanceList').innerHTML = analyzed.map(({record,analysis}) => mobilePerformanceCard(record,analysis)).join('');
@@ -776,7 +776,7 @@
   }
   function mobilePerformanceCard(record, analysis) {
     const labels = {winner:'高表现',normal:'正常',review:'待复盘',waiting:'等待数据',insufficient:'样本不足'};
-    const compareText = analysis.status === 'insufficient' ? `仅 ${analysis.baselineCount} 条可比历史` : `${formatLift(analysis)} vs 基线`;
+    const compareText = analysis.status === 'insufficient' ? `仅 ${analysis.baselineCount} 条可比历史` : `${formatLift(analysis)} 相对基线`;
     return `<article class="mobile-perf-card"><div><strong>${escapeHTML(record.title)}</strong><span class="status-pill ${analysis.status}">${labels[analysis.status]}</span></div><p>${escapeHTML(CHANNEL_PROFILES[record.platform]?.name || record.platform)} · ${formatDate(record.published_at)} · ${analysis.value === null ? '等待数据' : `${metricLabel(analysis.metric)} ${formatMetricValue(analysis.metric,analysis.value)}`}</p><footer><span class="${Number.isFinite(analysis.lift) && analysis.lift > 0 ? 'lift-up' : Number.isFinite(analysis.lift) && analysis.lift < 0 ? 'lift-down' : ''}">${compareText}</span>${analysis.status === 'waiting' ? `<button class="button button-ghost" type="button" data-enter-performance="${record.id}">录入</button>` : `<button class="button button-ghost" type="button" data-view-winner="${record.id}">查看</button>`}</footer></article>`;
   }
 
@@ -809,8 +809,8 @@
         performanceEntryMetrics(record,CHANNEL_PROFILES[record.platform]).forEach(metric => { metrics[metric] = parsePerformanceMetric(metric,row[metric]); if (Number.isFinite(metrics[metric])) hasMetric = true; }); if (hasMetric) updates.push({record,metrics});
       });
       if (!updates.length) throw new Error('没有匹配到可更新的内容。请提供内容编号，或同时提供标题与平台。');
-      updates.forEach(({record,metrics}) => { record.metrics = metrics; record.source = 'csv'; ensureRecordPattern(record); }); saveJSON(STORAGE.performance,performanceData); renderPerformance(); toast(`已从 CSV 更新 ${updates.length} 条内容表现`);
-    } catch (error) { toast(error.message || 'CSV 导入失败'); }
+      updates.forEach(({record,metrics}) => { record.metrics = metrics; record.source = 'csv'; ensureRecordPattern(record); }); saveJSON(STORAGE.performance,performanceData); renderPerformance(); toast(`已通过数据表更新 ${updates.length} 条内容表现`);
+    } catch (error) { toast(error.message || '数据表导入失败'); }
     finally { event.target.value = ''; }
   }
 
@@ -818,7 +818,7 @@
     const record = performanceData.find(item => item.id === recordId); if (!record) return; ensureRecordPattern(record); selectedWinnerId = recordId;
     const analysis = analyzePerformance(record); document.getElementById('winnerKicker').textContent = analysis.status === 'winner' ? '高表现内容详情' : '内容详情'; document.getElementById('winnerTitle').textContent = record.title;
     document.getElementById('winnerMeta').textContent = `${CHANNEL_PROFILES[record.platform].name} · ${GOALS[record.goal]} · ${record.source === 'demo' ? '演示数据' : '用户数据'}`;
-    const baselineNote = analysis.status === 'waiting' ? '尚未录入可用于当前目标的核心表现指标。' : analysis.status === 'insufficient' ? `当前仅有 ${analysis.baselineCount} 条“同平台 + 相同内容目标”的其他历史内容；至少需要 ${MIN_BASELINE_PEERS} 条才判断为高表现内容，因此不会写入创作经验。` : `基线使用 ${analysis.baselineCount} 条“同平台 + 相同内容目标”的其他历史内容计算，中位数与 Top 20% 均明确排除当前内容本身。`;
+    const baselineNote = analysis.status === 'waiting' ? '尚未录入可用于当前目标的核心表现指标。' : analysis.status === 'insufficient' ? `当前仅有 ${analysis.baselineCount} 条“同平台 + 相同内容目标”的其他历史内容；至少需要 ${MIN_BASELINE_PEERS} 条才判断为高表现内容，因此不会写入创作经验。` : `基线使用 ${analysis.baselineCount} 条“同平台 + 相同内容目标”的其他历史内容计算，中位数与前 20% 分位均明确排除当前内容本身。`;
     document.getElementById('winnerBody').innerHTML = `<div class="winner-metrics"><div class="winner-metric"><span>${metricLabel(analysis.metric)}</span><strong>${formatMetricValue(analysis.metric,analysis.value)}</strong></div><div class="winner-metric"><span>历史中位数</span><strong>${formatMetricValue(analysis.metric,analysis.baseline)}</strong></div><div class="winner-metric"><span>相比历史</span><strong class="${Number.isFinite(analysis.lift) && analysis.lift >= 0 ? 'lift-up' : Number.isFinite(analysis.lift) ? 'lift-down' : ''}">${formatLift(analysis)}</strong></div></div><div class="analysis-block"><h3>比较口径</h3><p>${escapeHTML(baselineNote)}</p></div><div class="analysis-block"><h3>内容规律拆解</h3><div class="analysis-grid"><div class="analysis-item"><b>开场方式</b><p>${escapeHTML(record.pattern.hook)}</p></div><div class="analysis-item"><b>内容结构</b><p>${escapeHTML(record.pattern.structure)}</p></div><div class="analysis-item"><b>表达方式</b><p>${escapeHTML(record.pattern.expression)}</p></div><div class="analysis-item"><b>适用范围</b><p>${escapeHTML(record.pattern.scope)}</p></div></div></div>`;
     const learned = experienceMemory.some(item => item.source_content_id === record.id), button = document.getElementById('learnExperienceButton'); button.disabled = learned || analysis.status !== 'winner';
     button.textContent = learned ? '已学习' : analysis.status === 'winner' ? '加入创作经验' : analysis.status === 'insufficient' ? '样本不足，暂不沉淀经验' : '仅高表现内容可加入经验'; openDialog('winnerModal');
