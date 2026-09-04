@@ -11,11 +11,11 @@
   };
 
   const GOALS = {
-    awareness: '曝光 / Awareness',
-    engagement: '互动 / Engagement',
-    consideration: '种草 / Consideration',
-    traffic: '引流 / Traffic',
-    conversion: '转化 / Conversion'
+    awareness: '曝光',
+    engagement: '互动',
+    consideration: '种草',
+    traffic: '引流',
+    conversion: '转化'
   };
 
   const EXPLORATION_RATE = 0.2;
@@ -25,30 +25,30 @@
     xiaohongshu: {
       id: 'xiaohongshu', name: '小红书', shortName: '小红书', contentType: '图文笔记', role: '种草 · 搜索承接', color: '#e9475f',
       tone: ['生活方式表达', '场景化', '第一人称或用户视角', '减少生硬销售话术'],
-      structure: ['标题 Hook', '正文', '话题', '配图建议'],
+      structure: ['标题吸引点', '正文', '话题', '配图建议'],
       outputFields: [{key:'title',label:'标题',title:true},{key:'body',label:'正文'},{key:'hashtags',label:'话题',format:'hashtags'},{key:'visualSuggestion',label:'配图建议'}],
       formatRule: { type:'arrayLength', field:'hashtags', min:3, max:6, term:'话题数量', label:'小红书平台格式', message:'小红书建议使用 3–6 个相关话题。', suggestion:'调整话题数量后再定稿。' },
-      rules: ['标题要有明确 Hook', '适量使用 Emoji', '使用 3–6 个相关话题', '强调可收藏、可分享的信息'],
+      rules: ['标题要有明确吸引点', '适量使用表情符号', '使用 3–6 个相关话题', '强调可收藏、可分享的信息'],
       availableMetrics: ['impressions', 'likes', 'collects', 'comments', 'shares'],
       goalMetrics: { awareness: 'impressions', engagement: 'engagement_rate', consideration: 'collect_rate', traffic: 'ctr', conversion: 'conversion_rate' }
     },
     douyin: {
       id: 'douyin', name: '抖音', shortName: '抖音', contentType: '短视频', role: '曝光 · 场景展示', color: '#222831',
       tone: ['口语化', '节奏快', '视频视觉优先', '一条内容只表达一个核心卖点'],
-      structure: ['Video Hook', '15–30 秒脚本', '发布文案', '推荐话题', '拍摄建议'],
-      outputFields: [{key:'hook',label:'Video Hook',title:true},{key:'script',label:'15–30 秒短视频脚本'},{key:'caption',label:'发布文案'},{key:'hashtags',label:'推荐话题',format:'hashtags'},{key:'shootingSuggestion',label:'拍摄建议'}],
-      formatRule: { type:'requiredText', requiredFields:['hook'], field:'script', includes:'0–3s', term:'视频 Hook', label:'抖音平台格式', message:'短视频缺少前 3 秒 Hook。', suggestion:'补充 0–3 秒镜头与口播。' },
-      rules: ['前 3 秒必须有明确 Hook', '产品尽早出现', 'CTA 简洁', '镜头围绕一个卖点展开'],
+      structure: ['视频开场', '15–30 秒脚本', '发布文案', '推荐话题', '拍摄建议'],
+      outputFields: [{key:'hook',label:'视频开场',title:true},{key:'script',label:'15–30 秒短视频脚本'},{key:'caption',label:'发布文案'},{key:'hashtags',label:'推荐话题',format:'hashtags'},{key:'shootingSuggestion',label:'拍摄建议'}],
+      formatRule: { type:'requiredText', requiredFields:['hook'], field:'script', includes:'0–3s', term:'视频开场', label:'抖音平台格式', message:'短视频缺少前 3 秒吸引点。', suggestion:'补充 0–3 秒镜头与口播。' },
+      rules: ['前 3 秒必须有明确吸引点', '产品尽早出现', '行动引导简洁', '镜头围绕一个卖点展开'],
       availableMetrics: ['plays', 'likes', 'comments', 'shares', 'completion_rate'],
       goalMetrics: { awareness: 'plays', engagement: 'engagement_rate', consideration: 'completion_rate', traffic: 'ctr', conversion: 'conversion_rate' }
     },
     wechat: {
       id: 'wechat', name: '微信公众号', shortName: '微信', contentType: '文章', role: '沉淀 · 长期经营', color: '#15975d',
       tone: ['结构化', '品牌故事完整', '事实描述充分', '情绪表达克制'],
-      structure: ['标题', '摘要', '正文结构', '完整正文', 'CTA', '封面建议'],
-      outputFields: [{key:'title',label:'标题',title:true},{key:'summary',label:'摘要'},{key:'outline',label:'正文结构'},{key:'body',label:'完整正文'},{key:'cta',label:'CTA'},{key:'coverSuggestion',label:'封面建议'}],
+      structure: ['标题', '摘要', '正文结构', '完整正文', '行动引导', '封面建议'],
+      outputFields: [{key:'title',label:'标题',title:true},{key:'summary',label:'摘要'},{key:'outline',label:'正文结构'},{key:'body',label:'完整正文'},{key:'cta',label:'行动引导'},{key:'coverSuggestion',label:'封面建议'}],
       formatRule: { type:'minLength', field:'body', min:280, term:'正文长度', label:'微信公众号平台格式', message:'公众号正文信息量不足。', suggestion:'补充结构、产品事实与使用场景。' },
-      rules: ['正文信息完整', '段落层级清楚', 'CTA 清晰', '产品事实不做延伸推断'],
+      rules: ['正文信息完整', '段落层级清楚', '行动引导清晰', '产品事实不做延伸推断'],
       availableMetrics: ['reads', 'shares', 'completion_rate'],
       goalMetrics: { awareness: 'reads', engagement: 'share_rate', consideration: 'completion_rate', traffic: 'ctr', conversion: 'conversion_rate' }
     }
@@ -115,15 +115,15 @@
   ];
 
   const DEFAULT_PERFORMANCE = [
-    { id:'perf-xhs-001', title:'广东人的夏天少不了这一口', platform:'xiaohongshu', product:'客家婆红豆冰糖豆腐花', product_category:'豆腐花 / 中式甜品', goal:'consideration', published_at:'2026-08-28T16:30:00+08:00', source:'demo', metrics:{impressions:18200,likes:980,collects:1240,comments:136,shares:218}, pattern:{hook:'地域身份 + 夏季消费场景',structure:'场景 → 产品 → 食用方式 → 收藏 CTA',expression:'生活方式分享感强，直接销售表达较少',scope:'豆腐花 / 即食食品 / 夏季场景种草'} },
+    { id:'perf-xhs-001', title:'广东人的夏天少不了这一口', platform:'xiaohongshu', product:'客家婆红豆冰糖豆腐花', product_category:'豆腐花 / 中式甜品', goal:'consideration', published_at:'2026-08-28T16:30:00+08:00', source:'demo', metrics:{impressions:18200,likes:980,collects:1240,comments:136,shares:218}, pattern:{hook:'地域身份 + 夏季消费场景',structure:'场景 → 产品 → 食用方式 → 收藏引导',expression:'生活方式分享感强，直接销售表达较少',scope:'豆腐花 / 即食食品 / 夏季场景种草'} },
     { id:'perf-xhs-002', title:'下班回家先冰上一碗豆腐花', platform:'xiaohongshu', product:'客家婆红豆冰糖豆腐花', product_category:'豆腐花 / 中式甜品', goal:'consideration', published_at:'2026-08-24T18:00:00+08:00', source:'demo', metrics:{impressions:15000,likes:790,collects:870,comments:102,shares:165}, pattern:{hook:'下班情绪 + 冰镇动作',structure:'情绪 → 食用动作 → 产品 → 分享建议',expression:'第一人称体验自然',scope:'即食甜品 / 上班族 / 夏季'} },
     { id:'perf-xhs-003', title:'周末下午茶的简单搭配', platform:'xiaohongshu', product:'山水豆腐花', product_category:'豆腐花 / 中式甜品', goal:'consideration', published_at:'2026-08-18T15:00:00+08:00', source:'demo', metrics:{impressions:14100,likes:620,collects:508,comments:71,shares:95}, pattern:{hook:'周末下午茶',structure:'场景 → 搭配 → 产品',expression:'轻松但产品出现偏晚',scope:'豆腐花 / 下午茶'} },
     { id:'perf-xhs-004', title:'早餐加一份细腻豆香', platform:'xiaohongshu', product:'山水豆腐花', product_category:'豆腐花 / 中式甜品', goal:'consideration', published_at:'2026-08-12T08:10:00+08:00', source:'demo', metrics:{impressions:13300,likes:510,collects:479,comments:58,shares:77}, pattern:{hook:'早餐场景',structure:'产品 → 口感 → 早餐',expression:'信息清楚但记忆点较弱',scope:'豆腐花 / 早餐'} },
-    { id:'perf-dy-001', title:'今晚豆腐这样做', platform:'douyin', product:'山水豆腐', product_category:'豆制品 / 豆腐', goal:'awareness', published_at:'2026-08-26T19:15:00+08:00', source:'demo', metrics:{plays:87000,likes:4100,comments:326,shares:812,completion_rate:43}, pattern:{hook:'成品近景 + 今晚吃什么',structure:'成品 → 产品 → 三步烹饪 → CTA',expression:'口语短句，单一做法',scope:'豆腐 / 家常菜 / 短视频'} },
+    { id:'perf-dy-001', title:'今晚豆腐这样做', platform:'douyin', product:'山水豆腐', product_category:'豆制品 / 豆腐', goal:'awareness', published_at:'2026-08-26T19:15:00+08:00', source:'demo', metrics:{plays:87000,likes:4100,comments:326,shares:812,completion_rate:43}, pattern:{hook:'成品近景 + 今晚吃什么',structure:'成品 → 产品 → 三步烹饪 → 行动引导',expression:'口语短句，单一做法',scope:'豆腐 / 家常菜 / 短视频'} },
     { id:'perf-dy-002', title:'一盘家常豆腐的20秒做法', platform:'douyin', product:'山水豆腐', product_category:'豆制品 / 豆腐', goal:'awareness', published_at:'2026-08-22T17:40:00+08:00', source:'demo', metrics:{plays:72000,likes:3500,comments:284,shares:620,completion_rate:40}, pattern:{hook:'20秒做法承诺',structure:'产品 → 步骤 → 成品',expression:'节奏清楚',scope:'豆腐 / 菜谱'} },
     { id:'perf-dy-003', title:'腐竹下锅前别忘了这一步', platform:'douyin', product:'山水腐竹', product_category:'豆制品 / 腐竹', goal:'awareness', published_at:'2026-08-16T12:20:00+08:00', source:'demo', metrics:{plays:68000,likes:2780,comments:310,shares:706,completion_rate:38}, pattern:{hook:'操作提醒',structure:'问题 → 处理方式 → 成品',expression:'实用信息明确',scope:'腐竹 / 烹饪技巧'} },
-    { id:'perf-dy-004', title:'火锅里的腐竹怎么搭', platform:'douyin', product:'山水腐竹', product_category:'豆制品 / 腐竹', goal:'awareness', published_at:'2026-08-10T20:10:00+08:00', source:'demo', metrics:{plays:59000,likes:2210,comments:174,shares:402,completion_rate:34}, pattern:{hook:'火锅场景',structure:'场景 → 产品 → 搭配',expression:'画面明确但 Hook 较弱',scope:'腐竹 / 火锅'} },
-    { id:'perf-wx-001', title:'一碗豆腐花里的客家味', platform:'wechat', product:'客家婆红豆冰糖豆腐花', product_category:'豆腐花 / 中式甜品', goal:'engagement', published_at:'2026-08-20T10:00:00+08:00', source:'demo', metrics:{reads:12600,shares:428,completion_rate:64}, pattern:{hook:'地方风味故事',structure:'记忆 → 风味 → 产品事实 → 分享 CTA',expression:'克制叙事，情绪与事实平衡',scope:'食品品牌故事 / 地方文化'} },
+    { id:'perf-dy-004', title:'火锅里的腐竹怎么搭', platform:'douyin', product:'山水腐竹', product_category:'豆制品 / 腐竹', goal:'awareness', published_at:'2026-08-10T20:10:00+08:00', source:'demo', metrics:{plays:59000,likes:2210,comments:174,shares:402,completion_rate:34}, pattern:{hook:'火锅场景',structure:'场景 → 产品 → 搭配',expression:'画面明确但 开场吸引点 较弱',scope:'腐竹 / 火锅'} },
+    { id:'perf-wx-001', title:'一碗豆腐花里的客家味', platform:'wechat', product:'客家婆红豆冰糖豆腐花', product_category:'豆腐花 / 中式甜品', goal:'engagement', published_at:'2026-08-20T10:00:00+08:00', source:'demo', metrics:{reads:12600,shares:428,completion_rate:64}, pattern:{hook:'地方风味故事',structure:'记忆 → 风味 → 产品事实 → 分享引导',expression:'克制叙事，情绪与事实平衡',scope:'食品品牌故事 / 地方文化'} },
     { id:'perf-wx-002', title:'夏日甜品也可以很简单', platform:'wechat', product:'山水豆腐花', product_category:'豆腐花 / 中式甜品', goal:'engagement', published_at:'2026-08-15T10:00:00+08:00', source:'demo', metrics:{reads:11200,shares:325,completion_rate:59}, pattern:{hook:'生活方式问题',structure:'场景 → 食用建议 → 产品',expression:'实用清晰',scope:'甜品 / 夏季'} },
     { id:'perf-wx-003', title:'家常豆腐的三种打开方式', platform:'wechat', product:'山水豆腐', product_category:'豆制品 / 豆腐', goal:'engagement', published_at:'2026-08-08T10:00:00+08:00', source:'demo', metrics:{reads:9800,shares:235,completion_rate:56}, pattern:{hook:'方法数量',structure:'总述 → 三种做法 → 产品事实',expression:'信息密度高',scope:'豆腐 / 家常烹饪'} },
     { id:'perf-wx-004', title:'从一桌家常菜说起', platform:'wechat', product:'山水腐竹', product_category:'豆制品 / 腐竹', goal:'engagement', published_at:'2026-08-02T10:00:00+08:00', source:'demo', metrics:{reads:8900,shares:160,completion_rate:50}, pattern:{hook:'家庭餐桌',structure:'故事 → 产品 → 做法',expression:'叙事偏长，分享动机不足',scope:'腐竹 / 家庭餐桌'} }
@@ -335,14 +335,14 @@
   function restoreDemoBrief() {
     const preserved = { id:campaign.id, outputs:{}, references:null, qa:{checks:[],issues:[]} };
     campaign = { ...clone(DEFAULT_CAMPAIGN), ...preserved }; activePlatform = campaign.channels[0];
-    renderProductOptions(); renderChannelOptions(); hydrateBriefForm(); renderCampaignState(); renderGeneration(); persistCampaign(); toast('已恢复演示 Brief');
+    renderProductOptions(); renderChannelOptions(); hydrateBriefForm(); renderCampaignState(); renderGeneration(); persistCampaign(); toast('已恢复演示简报');
   }
 
   function handleGenerate(event) {
     event.preventDefault();
     const brief = readBriefForm();
     if (!brief.channels.length) { toast('请至少选择一个目标平台'); return; }
-    if (!brief.brief || !brief.audience) { toast('请补充核心 Brief 和目标人群'); return; }
+    if (!brief.brief || !brief.audience) { toast('请补充核心简报和目标人群'); return; }
     Object.assign(campaign, brief);
     const product = getProduct(brief.productId);
     const relevantExperiences = retrieveExperiences(brief, product);
@@ -352,7 +352,7 @@
     campaign.outputs = {};
     campaign.channels.forEach(channel => {
       campaign.outputs[channel] = generateChannelContent(channel, brief, product, usedExperiences, exploration);
-      versions[channel] = []; addVersion(channel, exploration ? 'AI 初稿 · 探索' : 'AI 初稿');
+      versions[channel] = []; addVersion(channel, exploration ? '智能初稿 · 探索' : '智能初稿');
     });
     campaign.references = { productId:product.id, channels:[...campaign.channels], experienceIds:usedExperiences.map(item => item.id), exploration, generatedAt:new Date().toISOString() };
     campaign.qa = runQualityChecks(campaign.outputs, product); campaign.status = 'draft'; activePlatform = campaign.channels[0]; persistCampaign();
@@ -394,14 +394,14 @@
     const primaryScene = rankedScenes[0]?.index < Number.POSITIVE_INFINITY ? rankedScenes[0].scene : productScenes[0] || '日常饮食';
     const taskPrefix = brief.task && brief.task !== '产品推广' ? `${brief.task}｜` : '';
     const audienceLabel = audience.split(/[、，,]/)[0].slice(0,12);
-    const goalCTA = {
+    const goal行动引导 = {
       awareness:`如果这个场景也让你觉得熟悉，可以先记住 ${product.name}。`,
       engagement:`你会把 ${product.name} 放进哪个日常场景？欢迎分享自己的安排。`,
       consideration:`如果你也在找${primaryScene}的实用安排，可以先收藏，按需要再回来看看。`,
       traffic:'想继续了解，可以从品牌已公开的产品资料与实际渠道开始。',
       conversion:'如果它正好符合你的日常需要，可以通过实际购买渠道进一步了解。'
     };
-    return { focus, audience, audienceLabel, primaryScene, taskPrefix, cta:goalCTA[brief.goal] || goalCTA.consideration };
+    return { focus, audience, audienceLabel, primaryScene, taskPrefix, cta:goal行动引导[brief.goal] || goal行动引导.consideration };
   }
 
   function buildExperienceCue(hint, product, context) {
@@ -414,7 +414,7 @@
 
   function generateChannelContent(channel, brief, product, experiences, exploring = false) {
     const profile = CHANNEL_PROFILES[channel];
-    if (!profile) throw new Error(`未找到平台 Profile：${channel}`);
+    if (!profile) throw new Error(`未找到平台配置：${channel}`);
     const productScenes = (product.scenarios || []).filter(item => item && item !== '待补充');
     const scene = productScenes.slice(0,3).join('、') || '日常饮食';
     const context = buildCampaignContext(brief, product);
@@ -448,7 +448,7 @@
     const primaryScene = context.primaryScene;
     return {
       hook:experienceCue.videoHook || (isRedBeanPudding ? `“${context.taskPrefix}给${context.audience}的冰豆腐花场景。”` : `“${context.taskPrefix}${primaryScene}不知道怎么安排？先看 ${product.name} 这个做法。”`),
-      script:`0–3s\n${experienceCue.videoOpening || `${product.name}成品近景`}，字幕与口播直接出现 Hook。\n\n3–8s\n产品包装或成品入镜，突出“${heroFact}”，不叠加其他卖点。\n\n8–15s\n围绕“${context.focus}”切换${productScenes.slice(0,2).join('和') || primaryScene}场景，用动作展示：${serving}。\n\n15–20s\n产品与成品同框，字幕：“${context.cta}”`,
+      script:`0–3s\n${experienceCue.videoOpening || `${product.name}成品近景`}，字幕与口播直接出现开场吸引点。\n\n3–8s\n产品包装或成品入镜，突出“${heroFact}”，不叠加其他卖点。\n\n8–15s\n围绕“${context.focus}”切换${productScenes.slice(0,2).join('和') || primaryScene}场景，用动作展示：${serving}。\n\n15–20s\n产品与成品同框，字幕：“${context.cta}”`,
       caption:`面向${context.audience}，用 ${product.name} 回应“${context.focus}”。重点说清楚${heroFact}和实际准备方式，一条视频只讲一个卖点。`,
       hashtags:[...new Set([topicCategory, primaryScene, '家常美食', '日常饮食'])],
       shootingSuggestion:`竖屏 9:16；前 3 秒直接给${product.name}成品特写；自然光、快切，产品在第 5 秒前出现。`,
@@ -473,7 +473,7 @@
     const values = {
       title:`${context.taskPrefix}${product.name}｜${context.primaryScene}`, hook:`${context.primaryScene}如何安排？从 ${product.name} 开始。`,
       summary:`面向${context.audience}，围绕“${context.focus}”说明${heroFact}。`, body:`${experienceCue.lead ? `${experienceCue.lead} ` : ''}${context.focus}。${product.name}已经确认的产品信息包括${heroFact}。${serving}。${context.cta}`,
-      script:`开场呈现 ${product.name}，围绕${context.primaryScene}说明${heroFact}，结尾使用简洁行动建议。`, outline:'场景 → 产品事实 → 使用方式 → CTA',
+      script:`开场呈现 ${product.name}，围绕${context.primaryScene}说明${heroFact}，结尾使用简洁行动建议。`, outline:'场景 → 产品事实 → 使用方式 → 行动引导',
       caption:`${product.name}与${context.primaryScene}的日常内容。`, cta:context.cta, hashtags:[topicCategory, context.primaryScene, '日常饮食'],
       visualSuggestion:`围绕${product.name}与${context.primaryScene}呈现自然、真实的画面。`, shootingSuggestion:`优先呈现产品、${context.primaryScene}与真实使用动作。`, coverSuggestion:`使用${product.name}成品与${context.primaryScene}作为封面主体。`
     };
@@ -626,7 +626,7 @@
     const product = getProduct();
     const relevant = retrieveExperiences(campaign, product).filter(item => item.platform === channel).slice(0,3);
     campaign.outputs[channel] = generateChannelContent(channel, campaign, product, relevant, false);
-    addVersion(channel,'AI 重新生成'); campaign.qa = runQualityChecks(campaign.outputs,product); campaign.status = 'draft'; persistCampaign(); renderCampaignState(); renderGeneration(); toast(`${CHANNEL_PROFILES[channel].name}已重新生成`);
+    addVersion(channel,'智能重新生成'); campaign.qa = runQualityChecks(campaign.outputs,product); campaign.status = 'draft'; persistCampaign(); renderCampaignState(); renderGeneration(); toast(`${CHANNEL_PROFILES[channel].name}已重新生成`);
   }
   async function copyChannel(channel) {
     const profile = CHANNEL_PROFILES[channel], output = campaign.outputs[channel];
@@ -770,12 +770,12 @@
     document.querySelectorAll('[data-enter-performance]').forEach(button => button.addEventListener('click', () => openPerformanceEntry(button.dataset.enterPerformance)));
   }
   function performanceRow(record, analysis) {
-    const labels = {winner:'Winner',normal:'Normal',review:'Needs Review',waiting:'等待数据',insufficient:'样本不足'}, statusClass = analysis.status;
+    const labels = {winner:'高表现',normal:'正常',review:'待复盘',waiting:'等待数据',insufficient:'样本不足'}, statusClass = analysis.status;
     const compareText = analysis.status === 'insufficient' ? `仅 ${analysis.baselineCount} 条可比历史` : formatLift(analysis);
     return `<tr><td class="content-title-cell"><strong>${escapeHTML(record.title)}</strong><small>${escapeHTML(record.product)} · ${record.source === 'demo' ? '演示数据' : '用户数据'}</small></td><td><span class="platform-pill">${escapeHTML(CHANNEL_PROFILES[record.platform]?.shortName || record.platform)}</span></td><td>${formatDate(record.published_at)}</td><td>${analysis.value === null ? '—' : `${metricLabel(analysis.metric)} ${formatMetricValue(analysis.metric,analysis.value)}`}</td><td class="${Number.isFinite(analysis.lift) && analysis.lift > 0 ? 'lift-up' : Number.isFinite(analysis.lift) && analysis.lift < 0 ? 'lift-down' : ''}">${compareText}</td><td><span class="status-pill ${statusClass}">${labels[analysis.status]}</span></td><td>${analysis.status === 'waiting' ? `<button class="button button-ghost" type="button" data-enter-performance="${record.id}">录入表现</button>` : `<button class="button button-ghost" type="button" data-view-winner="${record.id}">${analysis.status === 'winner' ? '查看复盘' : '查看详情'}</button>`}</td></tr>`;
   }
   function mobilePerformanceCard(record, analysis) {
-    const labels = {winner:'Winner',normal:'Normal',review:'Needs Review',waiting:'等待数据',insufficient:'样本不足'};
+    const labels = {winner:'高表现',normal:'正常',review:'待复盘',waiting:'等待数据',insufficient:'样本不足'};
     const compareText = analysis.status === 'insufficient' ? `仅 ${analysis.baselineCount} 条可比历史` : `${formatLift(analysis)} vs 基线`;
     return `<article class="mobile-perf-card"><div><strong>${escapeHTML(record.title)}</strong><span class="status-pill ${analysis.status}">${labels[analysis.status]}</span></div><p>${escapeHTML(CHANNEL_PROFILES[record.platform]?.name || record.platform)} · ${formatDate(record.published_at)} · ${analysis.value === null ? '等待数据' : `${metricLabel(analysis.metric)} ${formatMetricValue(analysis.metric,analysis.value)}`}</p><footer><span class="${Number.isFinite(analysis.lift) && analysis.lift > 0 ? 'lift-up' : Number.isFinite(analysis.lift) && analysis.lift < 0 ? 'lift-down' : ''}">${compareText}</span>${analysis.status === 'waiting' ? `<button class="button button-ghost" type="button" data-enter-performance="${record.id}">录入</button>` : `<button class="button button-ghost" type="button" data-view-winner="${record.id}">查看</button>`}</footer></article>`;
   }
@@ -808,7 +808,7 @@
         const metrics = {}; let hasMetric = false;
         performanceEntryMetrics(record,CHANNEL_PROFILES[record.platform]).forEach(metric => { metrics[metric] = parsePerformanceMetric(metric,row[metric]); if (Number.isFinite(metrics[metric])) hasMetric = true; }); if (hasMetric) updates.push({record,metrics});
       });
-      if (!updates.length) throw new Error('没有匹配到可更新的内容。请提供 id，或同时提供 title 与 platform。');
+      if (!updates.length) throw new Error('没有匹配到可更新的内容。请提供内容编号，或同时提供标题与平台。');
       updates.forEach(({record,metrics}) => { record.metrics = metrics; record.source = 'csv'; ensureRecordPattern(record); }); saveJSON(STORAGE.performance,performanceData); renderPerformance(); toast(`已从 CSV 更新 ${updates.length} 条内容表现`);
     } catch (error) { toast(error.message || 'CSV 导入失败'); }
     finally { event.target.value = ''; }
@@ -816,10 +816,10 @@
 
   function openWinnerDetail(recordId) {
     const record = performanceData.find(item => item.id === recordId); if (!record) return; ensureRecordPattern(record); selectedWinnerId = recordId;
-    const analysis = analyzePerformance(record); document.getElementById('winnerKicker').textContent = analysis.status === 'winner' ? 'Winner 详情' : '内容详情'; document.getElementById('winnerTitle').textContent = record.title;
+    const analysis = analyzePerformance(record); document.getElementById('winnerKicker').textContent = analysis.status === 'winner' ? '高表现内容详情' : '内容详情'; document.getElementById('winnerTitle').textContent = record.title;
     document.getElementById('winnerMeta').textContent = `${CHANNEL_PROFILES[record.platform].name} · ${GOALS[record.goal]} · ${record.source === 'demo' ? '演示数据' : '用户数据'}`;
-    const baselineNote = analysis.status === 'waiting' ? '尚未录入可用于当前目标的核心表现指标。' : analysis.status === 'insufficient' ? `当前仅有 ${analysis.baselineCount} 条“同平台 + 相同内容目标”的其他历史内容；至少需要 ${MIN_BASELINE_PEERS} 条才判断 Winner，因此不会写入创作经验。` : `基线使用 ${analysis.baselineCount} 条“同平台 + 相同内容目标”的其他历史内容计算，中位数与 Top 20% 均明确排除当前内容本身。`;
-    document.getElementById('winnerBody').innerHTML = `<div class="winner-metrics"><div class="winner-metric"><span>${metricLabel(analysis.metric)}</span><strong>${formatMetricValue(analysis.metric,analysis.value)}</strong></div><div class="winner-metric"><span>历史中位数</span><strong>${formatMetricValue(analysis.metric,analysis.baseline)}</strong></div><div class="winner-metric"><span>相比历史</span><strong class="${Number.isFinite(analysis.lift) && analysis.lift >= 0 ? 'lift-up' : Number.isFinite(analysis.lift) ? 'lift-down' : ''}">${formatLift(analysis)}</strong></div></div><div class="analysis-block"><h3>比较口径</h3><p>${escapeHTML(baselineNote)}</p></div><div class="analysis-block"><h3>AI 复盘</h3><div class="analysis-grid"><div class="analysis-item"><b>Hook</b><p>${escapeHTML(record.pattern.hook)}</p></div><div class="analysis-item"><b>内容结构</b><p>${escapeHTML(record.pattern.structure)}</p></div><div class="analysis-item"><b>表达方式</b><p>${escapeHTML(record.pattern.expression)}</p></div><div class="analysis-item"><b>适用范围</b><p>${escapeHTML(record.pattern.scope)}</p></div></div></div>`;
+    const baselineNote = analysis.status === 'waiting' ? '尚未录入可用于当前目标的核心表现指标。' : analysis.status === 'insufficient' ? `当前仅有 ${analysis.baselineCount} 条“同平台 + 相同内容目标”的其他历史内容；至少需要 ${MIN_BASELINE_PEERS} 条才判断为高表现内容，因此不会写入创作经验。` : `基线使用 ${analysis.baselineCount} 条“同平台 + 相同内容目标”的其他历史内容计算，中位数与 Top 20% 均明确排除当前内容本身。`;
+    document.getElementById('winnerBody').innerHTML = `<div class="winner-metrics"><div class="winner-metric"><span>${metricLabel(analysis.metric)}</span><strong>${formatMetricValue(analysis.metric,analysis.value)}</strong></div><div class="winner-metric"><span>历史中位数</span><strong>${formatMetricValue(analysis.metric,analysis.baseline)}</strong></div><div class="winner-metric"><span>相比历史</span><strong class="${Number.isFinite(analysis.lift) && analysis.lift >= 0 ? 'lift-up' : Number.isFinite(analysis.lift) ? 'lift-down' : ''}">${formatLift(analysis)}</strong></div></div><div class="analysis-block"><h3>比较口径</h3><p>${escapeHTML(baselineNote)}</p></div><div class="analysis-block"><h3>内容规律拆解</h3><div class="analysis-grid"><div class="analysis-item"><b>开场方式</b><p>${escapeHTML(record.pattern.hook)}</p></div><div class="analysis-item"><b>内容结构</b><p>${escapeHTML(record.pattern.structure)}</p></div><div class="analysis-item"><b>表达方式</b><p>${escapeHTML(record.pattern.expression)}</p></div><div class="analysis-item"><b>适用范围</b><p>${escapeHTML(record.pattern.scope)}</p></div></div></div>`;
     const learned = experienceMemory.some(item => item.source_content_id === record.id), button = document.getElementById('learnExperienceButton'); button.disabled = learned || analysis.status !== 'winner';
     button.textContent = learned ? '已学习' : analysis.status === 'winner' ? '加入创作经验' : analysis.status === 'insufficient' ? '样本不足，暂不沉淀经验' : '仅高表现内容可加入经验'; openDialog('winnerModal');
   }
