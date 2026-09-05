@@ -10,8 +10,9 @@
     "source_campaign": "夏日冰豆腐花经验样本",
     "metric_name": "collect_rate",
     "metric_value": 6.8,
-    "baseline_value": 4.7,
-    "lift": 45,
+    "baseline_value": 3.6,
+    "lift": 89,
+    "baseline_count": 3,
     "learned_at": "2026-08-30",
     "data_notice": "演示数据"
   },
@@ -26,8 +27,9 @@
     "source_campaign": "家常豆腐经验样本",
     "metric_name": "plays",
     "metric_value": 87000,
-    "baseline_value": 70000,
-    "lift": 24,
+    "baseline_value": 68000,
+    "lift": 28,
+    "baseline_count": 3,
     "learned_at": "2026-08-27",
     "data_notice": "演示数据"
   }

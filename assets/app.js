@@ -105,12 +105,12 @@
     {
       id: 'exp-xhs-scene-001', platform: 'xiaohongshu', product_category: '豆腐花 / 中式甜品', campaign_goal: 'consideration',
       content_pattern: '地域文化 + 明确食用场景', insight: '在豆腐花种草内容中，用地域身份切入，再快速落到冰镇与分享场景，收藏表现更好。',
-      source_content_id: 'seed-xhs-scene', source_campaign: '夏日冰豆腐花经验样本', metric_name: 'collect_rate', metric_value: 6.8, baseline_value: 4.7, lift: 45, learned_at: '2026-08-30'
+      source_content_id: 'seed-xhs-scene', source_campaign: '夏日冰豆腐花经验样本', metric_name: 'collect_rate', metric_value: 6.8, baseline_value: 3.6, lift: 89, baseline_count: 3, learned_at: '2026-08-30'
     },
     {
       id: 'exp-dy-product-001', platform: 'douyin', product_category: '豆制品 / 豆腐', campaign_goal: 'awareness',
       content_pattern: '成品画面前置 + 单一卖点', insight: '视频前 3 秒先展示成品和产品，再用一个家常场景解释卖点，更有利于播放完成。',
-      source_content_id: 'seed-dy-product', source_campaign: '家常豆腐经验样本', metric_name: 'plays', metric_value: 87000, baseline_value: 70000, lift: 24, learned_at: '2026-08-27'
+      source_content_id: 'seed-dy-product', source_campaign: '家常豆腐经验样本', metric_name: 'plays', metric_value: 87000, baseline_value: 68000, lift: 28, baseline_count: 3, learned_at: '2026-08-27'
     }
   ];
 
@@ -222,8 +222,20 @@
       scenarios:Array.isArray(product.scenarios) ? product.scenarios : asArray(product.scenarios), usableFacts:Array.isArray(product.usableFacts) ? product.usableFacts : asArray(product.usableFacts),
       forbiddenInference:Array.isArray(product.forbiddenInference) ? product.forbiddenInference : asArray(product.forbiddenInference), source:product.source || '用户数据'
     }));
-    if (!Array.isArray(experienceMemory)) experienceMemory = clone(DEFAULT_EXPERIENCES);
     if (!Array.isArray(performanceData)) performanceData = clone(DEFAULT_PERFORMANCE);
+    if (!Array.isArray(experienceMemory)) experienceMemory = clone(DEFAULT_EXPERIENCES);
+    experienceMemory = experienceMemory.map(item => {
+      const defaultItem = DEFAULT_EXPERIENCES.find(candidate => candidate.id === item?.id);
+      let normalized = defaultItem && !(Number.isInteger(Number(item.baseline_count)) && Number(item.baseline_count) >= MIN_BASELINE_PEERS)
+        ? { ...item, baseline_value:defaultItem.baseline_value, lift:defaultItem.lift, baseline_count:defaultItem.baseline_count }
+        : item;
+      if (!isEligibleExperience(normalized) && normalized?.source_content_id) {
+        const sourceRecord = performanceData.find(record => record.id === normalized.source_content_id);
+        const analysis = sourceRecord ? analyzePerformance(sourceRecord) : null;
+        if (analysis?.status === 'winner') normalized = { ...normalized, platform:sourceRecord.platform, product_category:sourceRecord.product_category, campaign_goal:sourceRecord.goal, metric_name:analysis.metric, metric_value:analysis.value, baseline_value:analysis.baseline, top20_value:analysis.top20, lift:analysis.lift, baseline_count:analysis.baselineCount };
+      }
+      return normalized;
+    });
     if (!versions || typeof versions !== 'object' || Array.isArray(versions)) versions = {};
     campaign = { ...clone(DEFAULT_CAMPAIGN), ...(campaign && typeof campaign === 'object' ? campaign : {}) };
     campaign.brief = String(campaign.brief || '');
@@ -237,6 +249,24 @@
     if (!campaign.channels.length) campaign.channels = ['xiaohongshu', 'douyin'];
     if (Object.keys(campaign.outputs).length && campaign.channels.some(channel => !campaign.outputs[channel])) {
       campaign.outputs = {}; campaign.references = null; campaign.qa = { checks:[], issues:[] }; campaign.status = 'draft';
+    }
+    const legacyAppliedExperiences = Object.values(campaign.outputs).map(output => output?.appliedExperience).filter(Boolean);
+    if (campaign.references?.exploration && ((campaign.references.experienceIds || []).length || legacyAppliedExperiences.length)) {
+      const matchedIds = experienceMemory.filter(item => legacyAppliedExperiences.includes(item.content_pattern)).map(item => item.id);
+      campaign.references.exploration = false;
+      campaign.references.experienceIds = [...new Set([...(campaign.references.experienceIds || []), ...matchedIds])];
+      Object.values(campaign.outputs).forEach(output => { if (output?.strategyNote) output.strategyNote = ''; });
+    }
+    if (campaign.references && !campaign.references.exploration) {
+      const eligibleReferences = (campaign.references.experienceIds || []).map(id => experienceMemory.find(item => item.id === id)).filter(isEligibleExperience);
+      const eligiblePatterns = new Set(eligibleReferences.map(item => item.content_pattern));
+      campaign.references.experienceIds = eligibleReferences.map(item => item.id);
+      Object.values(campaign.outputs).forEach(output => {
+        if (output?.appliedExperience && !eligiblePatterns.has(output.appliedExperience)) {
+          output.appliedExperience = null;
+          output.strategyNote = '旧版本引用的经验证据不完整；重新生成时不会继续使用该经验。';
+        }
+      });
     }
     if (!CHANNEL_PROFILES[activePlatform] || !campaign.channels.includes(activePlatform)) activePlatform = campaign.channels[0];
   }
@@ -345,9 +375,8 @@
     if (!brief.brief || !brief.audience) { toast('请补充核心简报和目标人群'); return; }
     Object.assign(campaign, brief);
     const product = getProduct(brief.productId);
-    const relevantExperiences = retrieveExperiences(brief, product);
     const exploration = Math.random() < EXPLORATION_RATE;
-    const usedExperiences = exploration ? [] : relevantExperiences.slice(0, 3);
+    const usedExperiences = exploration ? [] : retrieveExperiences(brief, product).slice(0, 3);
 
     campaign.outputs = {};
     campaign.channels.forEach(channel => {
@@ -364,7 +393,7 @@
   function retrieveExperiences(brief, product) {
     const text = `${product.name} ${product.category} ${brief.brief} ${brief.audience}`.toLowerCase();
     const tokens = [...new Set(text.split(/[\s，。、“”/｜]+/).filter(token => token.length >= 2))];
-    return experienceMemory.map(item => {
+    return experienceMemory.filter(isEligibleExperience).map(item => {
       let score = 0;
       const platformMatch = Boolean(item.platform && brief.channels.includes(item.platform));
       const categoryMatch = item.product_category === product.category || (product.category !== '待补充' && item.product_category?.includes(product.category.split(' / ')[0]));
@@ -376,6 +405,17 @@
       const topicMatches = tokens.filter(token => haystack.includes(token)).length; score += topicMatches;
       return { ...item, relevance:score, platformMatch, categoryMatch, goalMatch, topicMatches };
     }).filter(item => item.platformMatch && item.categoryMatch && (item.goalMatch || item.topicMatches > 0)).sort((a,b) => b.relevance - a.relevance || b.lift - a.lift);
+  }
+  function isEligibleExperience(item) {
+    if (!item || typeof item !== 'object') return false;
+    const profile = CHANNEL_PROFILES[item.platform], expectedMetric = profile?.goalMetrics?.[item.campaign_goal], metricName = item.metric_name || expectedMetric;
+    const metricValue = Number(item.metric_value), baselineValue = Number(item.baseline_value);
+    const top20Value = item.top20_value === undefined || item.top20_value === null || item.top20_value === '' ? null : Number(item.top20_value);
+    if (!profile || !expectedMetric || metricName !== expectedMetric || !Number.isInteger(Number(item.baseline_count)) || Number(item.baseline_count) < MIN_BASELINE_PEERS) return false;
+    if (!isValidMetricValue(metricName,metricValue) || !isValidAggregateMetricValue(metricName,baselineValue) || baselineValue <= 0 || metricValue <= baselineValue) return false;
+    if (top20Value !== null && (!isValidAggregateMetricValue(metricName,top20Value) || top20Value < baselineValue)) return false;
+    const lift = (metricValue-baselineValue)/baselineValue*100;
+    return lift >= 20 || (top20Value !== null && metricValue >= top20Value && lift > 0);
   }
   function experienceHint(experiences, channel) { return experiences.find(item => item.platform === channel)?.content_pattern || ''; }
 
@@ -575,7 +615,7 @@
   }
   function renderReferences() {
     const product = getProduct(campaign.references?.productId);
-    const experienceItems = (campaign.references?.experienceIds || []).map(id => experienceMemory.find(item => item.id === id)).filter(Boolean);
+    const experienceItems = (campaign.references?.experienceIds || []).map(id => experienceMemory.find(item => item.id === id)).filter(isEligibleExperience);
     const exploring = Boolean(campaign.references?.exploration);
     document.getElementById('referenceSummary').textContent = exploring
       ? `品牌资料 · ${product.name}产品资料 · ${campaign.channels.length} 个平台规则 · 探索模式（本轮不引用历史经验）`
@@ -624,9 +664,14 @@
   }
   function regenerateChannel(channel) {
     const product = getProduct();
-    const relevant = retrieveExperiences(campaign, product).filter(item => item.platform === channel).slice(0,3);
-    campaign.outputs[channel] = generateChannelContent(channel, campaign, product, relevant, false);
-    addVersion(channel,'智能重新生成'); campaign.qa = runQualityChecks(campaign.outputs,product); campaign.status = 'draft'; persistCampaign(); renderCampaignState(); renderGeneration(); toast(`${CHANNEL_PROFILES[channel].name}已重新生成`);
+    const exploring = Boolean(campaign.references?.exploration);
+    const relevant = referencedExperiencesForChannel(channel);
+    campaign.outputs[channel] = generateChannelContent(channel, campaign, product, relevant, exploring);
+    addVersion(channel,exploring ? '智能重新生成 · 探索' : '智能重新生成'); campaign.qa = runQualityChecks(campaign.outputs,product); campaign.status = 'draft'; persistCampaign(); renderCampaignState(); renderGeneration(); toast(`${CHANNEL_PROFILES[channel].name}已按本轮${exploring ? '探索' : '经验引用'}策略重新生成`);
+  }
+  function referencedExperiencesForChannel(channel) {
+    if (campaign.references?.exploration) return [];
+    return (campaign.references?.experienceIds || []).map(id => experienceMemory.find(item => item.id === id)).filter(item => item?.platform === channel && isEligibleExperience(item)).slice(0,3);
   }
   async function copyChannel(channel) {
     const profile = CHANNEL_PROFILES[channel], output = campaign.outputs[channel];
@@ -664,7 +709,8 @@
     if (rule.type === 'arrayLength') {
       const fallbacks = [product.category.split(' / ')[0],product.scenarios[0],'家庭分享','日常饮食']; output[rule.field] = [...new Set([...(Array.isArray(output[rule.field]) ? output[rule.field] : []),...fallbacks])].filter(Boolean).slice(0,rule.max); while (output[rule.field].length < rule.min) output[rule.field].push(`内容灵感${output[rule.field].length+1}`);
     } else {
-      const safe = generateChannelContent(issue.channel,campaign,product,retrieveExperiences(campaign,product).filter(item => item.platform === issue.channel).slice(0,3),false);
+      const exploring = Boolean(campaign.references?.exploration);
+      const safe = generateChannelContent(issue.channel,campaign,product,referencedExperiencesForChannel(issue.channel),exploring);
       if (rule.type === 'requiredText') { (rule.requiredFields || []).forEach(field => { if (!String(output[field] || '').trim()) output[field] = safe[field]; }); if (!String(output[rule.field] || '').includes(rule.includes)) output[rule.field] = safe[rule.field]; }
       else if (rule.type === 'minLength' && String(output[rule.field] || '').length < rule.min) output[rule.field] = safe[rule.field];
     }
@@ -747,7 +793,8 @@
     const baselineCount = peerValues.length;
     const baseline = median(peerValues), top20 = percentile(peerValues,.8);
     if (baselineCount < MIN_BASELINE_PEERS || !Number.isFinite(baseline)) return { metric, value, baseline, top20, lift:null, baselineCount, status:'insufficient' };
-    const lift = baseline > 0 ? (value - baseline) / baseline * 100 : 0;
+    if (baseline === 0) return { metric, value, baseline, top20, lift:null, baselineCount, status:'zero-baseline' };
+    const lift = (value - baseline) / baseline * 100;
     const status = (lift >= 20 || (top20 !== null && value >= top20 && lift > 0)) ? 'winner' : lift < -10 ? 'review' : 'normal';
     return { metric, value, baseline, top20, lift, baselineCount, status };
   }
@@ -770,13 +817,13 @@
     document.querySelectorAll('[data-enter-performance]').forEach(button => button.addEventListener('click', () => openPerformanceEntry(button.dataset.enterPerformance)));
   }
   function performanceRow(record, analysis) {
-    const labels = {winner:'高表现',normal:'正常',review:'待复盘',waiting:'等待数据',insufficient:'样本不足'}, statusClass = analysis.status;
-    const compareText = analysis.status === 'insufficient' ? `仅 ${analysis.baselineCount} 条可比历史` : formatLift(analysis);
+    const labels = {winner:'高表现',normal:'正常',review:'待复盘',waiting:'等待数据',insufficient:'样本不足','zero-baseline':'基线不可计算'}, statusClass = analysis.status;
+    const compareText = analysis.status === 'insufficient' ? `仅 ${analysis.baselineCount} 条可比历史` : analysis.status === 'zero-baseline' ? '历史基线为 0' : formatLift(analysis);
     return `<tr><td class="content-title-cell"><strong>${escapeHTML(record.title)}</strong><small>${escapeHTML(record.product)} · ${record.source === 'demo' ? '演示数据' : '用户数据'}</small></td><td><span class="platform-pill">${escapeHTML(CHANNEL_PROFILES[record.platform]?.shortName || record.platform)}</span></td><td>${formatDate(record.published_at)}</td><td>${analysis.value === null ? '—' : `${metricLabel(analysis.metric)} ${formatMetricValue(analysis.metric,analysis.value)}`}</td><td class="${Number.isFinite(analysis.lift) && analysis.lift > 0 ? 'lift-up' : Number.isFinite(analysis.lift) && analysis.lift < 0 ? 'lift-down' : ''}">${compareText}</td><td><span class="status-pill ${statusClass}">${labels[analysis.status]}</span></td><td>${analysis.status === 'waiting' ? `<button class="button button-ghost" type="button" data-enter-performance="${record.id}">录入表现</button>` : `<button class="button button-ghost" type="button" data-view-winner="${record.id}">${analysis.status === 'winner' ? '查看复盘' : '查看详情'}</button>`}</td></tr>`;
   }
   function mobilePerformanceCard(record, analysis) {
-    const labels = {winner:'高表现',normal:'正常',review:'待复盘',waiting:'等待数据',insufficient:'样本不足'};
-    const compareText = analysis.status === 'insufficient' ? `仅 ${analysis.baselineCount} 条可比历史` : `${formatLift(analysis)} 相对基线`;
+    const labels = {winner:'高表现',normal:'正常',review:'待复盘',waiting:'等待数据',insufficient:'样本不足','zero-baseline':'基线不可计算'};
+    const compareText = analysis.status === 'insufficient' ? `仅 ${analysis.baselineCount} 条可比历史` : analysis.status === 'zero-baseline' ? '历史基线为 0' : `${formatLift(analysis)} 相对基线`;
     return `<article class="mobile-perf-card"><div><strong>${escapeHTML(record.title)}</strong><span class="status-pill ${analysis.status}">${labels[analysis.status]}</span></div><p>${escapeHTML(CHANNEL_PROFILES[record.platform]?.name || record.platform)} · ${formatDate(record.published_at)} · ${analysis.value === null ? '等待数据' : `${metricLabel(analysis.metric)} ${formatMetricValue(analysis.metric,analysis.value)}`}</p><footer><span class="${Number.isFinite(analysis.lift) && analysis.lift > 0 ? 'lift-up' : Number.isFinite(analysis.lift) && analysis.lift < 0 ? 'lift-down' : ''}">${compareText}</span>${analysis.status === 'waiting' ? `<button class="button button-ghost" type="button" data-enter-performance="${record.id}">录入</button>` : `<button class="button button-ghost" type="button" data-view-winner="${record.id}">查看</button>`}</footer></article>`;
   }
 
@@ -786,9 +833,17 @@
     document.getElementById('metricEntryFields').innerHTML = performanceEntryMetrics(record,profile).map(metric => `<label class="field"><span>${escapeHTML(metricLabel(metric))}${metric === profile.goalMetrics[record.goal] ? ' · 核心' : ''}</span><input type="number" min="0" ${metric.includes('rate') ? 'max="100"' : ''} step="${metric.includes('rate') ? '0.1' : '1'}" name="metric-${metric}" value="${Number.isFinite(record.metrics?.[metric]) ? record.metrics[metric] : ''}" placeholder="未提供"></label>`).join(''); openDialog('performanceModal');
   }
   function performanceEntryMetrics(record, profile) { return [...new Set([...profile.availableMetrics,profile.goalMetrics[record.goal]].filter(Boolean))]; }
+  function isRateMetric(metric) { return metric.includes('rate') || metric === 'ctr'; }
+  function isValidMetricValue(metric, value) {
+    if (!Number.isFinite(value) || value < 0) return false;
+    return isRateMetric(metric) ? value <= 100 : Number.isInteger(value);
+  }
+  function isValidAggregateMetricValue(metric, value) {
+    return Number.isFinite(value) && value >= 0 && (!isRateMetric(metric) || value <= 100);
+  }
   function parsePerformanceMetric(metric, raw) {
-    if (raw === undefined || raw === null || raw === '') return null; const value = Number(raw), isRate = metric.includes('rate') || metric === 'ctr';
-    if (!Number.isFinite(value) || value < 0 || (isRate && value > 100) || (!isRate && !Number.isInteger(value))) throw new Error(`${metricLabel(metric)}的数据格式无效${isRate ? '，比例应在 0–100 之间' : '，数量应为非负整数'}`); return value;
+    if (raw === undefined || raw === null || raw === '') return null; const value = Number(raw), isRate = isRateMetric(metric);
+    if (!isValidMetricValue(metric,value)) throw new Error(`${metricLabel(metric)}的数据格式无效${isRate ? '，比例应在 0–100 之间' : '，数量应为非负整数'}`); return value;
   }
   function savePerformanceEntry(event) {
     event.preventDefault(); const record = performanceData.find(item => item.id === selectedPerformanceId), profile = record && CHANNEL_PROFILES[record.platform]; if (!record || !profile) return;
@@ -818,15 +873,15 @@
     const record = performanceData.find(item => item.id === recordId); if (!record) return; ensureRecordPattern(record); selectedWinnerId = recordId;
     const analysis = analyzePerformance(record); document.getElementById('winnerKicker').textContent = analysis.status === 'winner' ? '高表现内容详情' : '内容详情'; document.getElementById('winnerTitle').textContent = record.title;
     document.getElementById('winnerMeta').textContent = `${CHANNEL_PROFILES[record.platform].name} · ${GOALS[record.goal]} · ${record.source === 'demo' ? '演示数据' : '用户数据'}`;
-    const baselineNote = analysis.status === 'waiting' ? '尚未录入可用于当前目标的核心表现指标。' : analysis.status === 'insufficient' ? `当前仅有 ${analysis.baselineCount} 条“同平台 + 相同内容目标”的其他历史内容；至少需要 ${MIN_BASELINE_PEERS} 条才判断为高表现内容，因此不会写入创作经验。` : `基线使用 ${analysis.baselineCount} 条“同平台 + 相同内容目标”的其他历史内容计算，中位数与前 20% 分位均明确排除当前内容本身。`;
+    const baselineNote = analysis.status === 'waiting' ? '尚未录入可用于当前目标的核心表现指标。' : analysis.status === 'insufficient' ? `当前仅有 ${analysis.baselineCount} 条“同平台 + 相同内容目标”的其他历史内容；至少需要 ${MIN_BASELINE_PEERS} 条才判断为高表现内容，因此不会写入创作经验。` : analysis.status === 'zero-baseline' ? `已有 ${analysis.baselineCount} 条可比历史，但历史中位数为 0，无法计算可靠的相对提升；本条暂不判为高表现内容，也不会写入创作经验。` : `基线使用 ${analysis.baselineCount} 条“同平台 + 相同内容目标”的其他历史内容计算，中位数与前 20% 分位均明确排除当前内容本身。`;
     document.getElementById('winnerBody').innerHTML = `<div class="winner-metrics"><div class="winner-metric"><span>${metricLabel(analysis.metric)}</span><strong>${formatMetricValue(analysis.metric,analysis.value)}</strong></div><div class="winner-metric"><span>历史中位数</span><strong>${formatMetricValue(analysis.metric,analysis.baseline)}</strong></div><div class="winner-metric"><span>相比历史</span><strong class="${Number.isFinite(analysis.lift) && analysis.lift >= 0 ? 'lift-up' : Number.isFinite(analysis.lift) ? 'lift-down' : ''}">${formatLift(analysis)}</strong></div></div><div class="analysis-block"><h3>比较口径</h3><p>${escapeHTML(baselineNote)}</p></div><div class="analysis-block"><h3>内容规律拆解</h3><div class="analysis-grid"><div class="analysis-item"><b>开场方式</b><p>${escapeHTML(record.pattern.hook)}</p></div><div class="analysis-item"><b>内容结构</b><p>${escapeHTML(record.pattern.structure)}</p></div><div class="analysis-item"><b>表达方式</b><p>${escapeHTML(record.pattern.expression)}</p></div><div class="analysis-item"><b>适用范围</b><p>${escapeHTML(record.pattern.scope)}</p></div></div></div>`;
     const learned = experienceMemory.some(item => item.source_content_id === record.id), button = document.getElementById('learnExperienceButton'); button.disabled = learned || analysis.status !== 'winner';
-    button.textContent = learned ? '已学习' : analysis.status === 'winner' ? '加入创作经验' : analysis.status === 'insufficient' ? '样本不足，暂不沉淀经验' : '仅高表现内容可加入经验'; openDialog('winnerModal');
+    button.textContent = learned ? '已学习' : analysis.status === 'winner' ? '加入创作经验' : analysis.status === 'insufficient' ? '样本不足，暂不沉淀经验' : analysis.status === 'zero-baseline' ? '基线不可计算，暂不沉淀经验' : '仅高表现内容可加入经验'; openDialog('winnerModal');
   }
   function learnSelectedWinner() {
     const record = performanceData.find(item => item.id === selectedWinnerId); if (!record || experienceMemory.some(item => item.source_content_id === record.id)) return;
     const analysis = analyzePerformance(record); if (analysis.status !== 'winner') return;
-    experienceMemory.unshift({ id:uid('experience'), platform:record.platform, product_category:record.product_category, campaign_goal:record.goal, content_pattern:record.pattern.hook, insight:`${record.pattern.structure}；${record.pattern.expression}。在同平台、相同内容目标下表现较好。`, source_content_id:record.id, source_campaign:record.title, metric_name:analysis.metric, metric_value:analysis.value, baseline_value:analysis.baseline, lift:Math.round(analysis.lift), baseline_count:analysis.baselineCount, learned_at:localDateKey() });
+    experienceMemory.unshift({ id:uid('experience'), platform:record.platform, product_category:record.product_category, campaign_goal:record.goal, content_pattern:record.pattern.hook, insight:`${record.pattern.structure}；${record.pattern.expression}。在同平台、相同内容目标下表现较好。`, source_content_id:record.id, source_campaign:record.title, metric_name:analysis.metric, metric_value:analysis.value, baseline_value:analysis.baseline, top20_value:analysis.top20, lift:Math.round(analysis.lift), baseline_count:analysis.baselineCount, learned_at:localDateKey() });
     saveJSON(STORAGE.experience,experienceMemory); updateMemoryCounts(); renderMemory(); renderPerformance(); openWinnerDetail(record.id); toast('已加入创作经验，下次生成相似内容时会自动参考');
   }
 
@@ -848,8 +903,13 @@
       if (type === 'product' && (record.name || record.title)) {
         const name = record.name || record.title; brandMemory.products.push({ id:uid('product'), name, category:record.product_category || record.productCategory || '待补充', description:record.description || record.content || record.value || '待补充', sellingPoints:asArray(record.sellingPoints || record.selling_points), specification:record.specification || '待补充', serving:record.serving || '待补充', scenarios:asArray(record.scenarios), usableFacts:asArray(record.usableFacts || record.usable_facts || record.content || record.value), forbiddenInference:asArray(record.forbiddenInference || record.forbidden_inference || '医疗、营养及绝对化功效'), source:record.source || '用户导入' }); count++;
       } else if (type === 'experience' && (record.content_pattern || record.title)) {
-        const metricValue = Number(record.metric_value), baselineValue = Number(record.baseline_value), lift = Number.isFinite(Number(record.lift)) ? Number(record.lift) : (baselineValue > 0 ? (metricValue-baselineValue)/baselineValue*100 : 0);
-        if (CHANNEL_PROFILES[record.platform] && record.product_category && record.campaign_goal && metricValue > baselineValue && baselineValue > 0 && lift > 0) { experienceMemory.unshift({ id:uid('experience'), platform:record.platform, product_category:record.product_category, campaign_goal:record.campaign_goal, content_pattern:record.content_pattern || record.title, insight:record.insight || record.content || record.value || '用户导入的创作经验', source_content_id:record.source_content_id || uid('import-source'), source_campaign:record.source_campaign || '用户导入', metric_name:record.metric_name || CHANNEL_PROFILES[record.platform].goalMetrics[record.campaign_goal], metric_value:metricValue, baseline_value:baselineValue, lift, learned_at:record.learned_at || localDateKey() }); count++; }
+        const profile = CHANNEL_PROFILES[record.platform], metricValue = Number(record.metric_value), baselineValue = Number(record.baseline_value), baselineCount = Number(record.baseline_count), top20Value = record.top20_value === undefined || record.top20_value === null || record.top20_value === '' ? null : Number(record.top20_value);
+        const metricName = record.metric_name || profile?.goalMetrics?.[record.campaign_goal], expectedMetric = profile?.goalMetrics?.[record.campaign_goal];
+        const lift = baselineValue > 0 ? (metricValue-baselineValue)/baselineValue*100 : 0;
+        const candidate = { id:uid('experience'), platform:record.platform, product_category:record.product_category, campaign_goal:record.campaign_goal, content_pattern:record.content_pattern || record.title, insight:record.insight || record.content || record.value || '用户导入的创作经验', source_content_id:record.source_content_id || uid('import-source'), source_campaign:record.source_campaign || '用户导入', metric_name:metricName, metric_value:metricValue, baseline_value:baselineValue, ...(top20Value !== null ? {top20_value:top20Value} : {}), lift, baseline_count:baselineCount, learned_at:record.learned_at || localDateKey() };
+        if (profile && GOALS[record.campaign_goal] && metricName === expectedMetric && record.product_category && isEligibleExperience(candidate)) {
+          experienceMemory.unshift(candidate); count++;
+        }
       } else {
         const title = record.title || record.key || record.name, content = record.content || record.value || record.description; if (title && content) { brandMemory.customFacts = brandMemory.customFacts || []; brandMemory.customFacts.push({id:uid('brand-fact'),title,content,source:record.source || '用户导入'}); count++; }
       }

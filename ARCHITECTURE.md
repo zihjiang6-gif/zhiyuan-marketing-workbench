@@ -68,6 +68,7 @@ MVP UI 只展示小红书、抖音、微信公众号。生成层通过 `CHANNEL_
   metric_name,
   metric_value,
   baseline_value,
+  top20_value,     // 可选：以 Top 20% 规则判定时保存
   lift,
   baseline_count,
   learned_at
@@ -76,7 +77,7 @@ MVP UI 只展示小红书、抖音、微信公众号。生成层通过 `CHANNEL_
 
 它回答：**过去什么创作方式表现较好？**
 
-Performance 不能直接回写 Brand Knowledge。只有内容被判为 Winner，且用户在详情中点击“加入创作经验”后，Pattern 才进入 Experience Memory。
+Performance 不能直接回写 Brand Knowledge。界面内只有内容被判为 Winner，且用户在详情中点击“加入创作经验”后，Pattern 才进入 Experience Memory。通过 JSON / CSV 直接导入 Experience 时，也必须提供至少 3 条可比历史、正向基线及满足 Winner 规则的证据。
 
 ### Generation Layer
 
@@ -175,6 +176,8 @@ peer.id !== current.id
 - 当前内容相对历史中位数的 Lift。
 
 同时设置 `MIN_BASELINE_PEERS = 3`。如果除当前内容之外的可比历史少于 3 条，则状态为“样本不足”，只展示事实指标，不判 Winner，也不允许沉淀 Experience。
+
+如果历史中位数为 0，则相对 Lift 无法可靠计算，状态显示“基线不可计算”；这类内容同样不判 Winner、不沉淀 Experience。
 
 当前 Winner 启发式：
 
@@ -278,6 +281,7 @@ Prototype 实际使用 `demo` 与 `manual`，CSV 用于本地导入。`api` 只�
 - 食品事实缺失时显示“待补充”，不做功效推断；
 - 当前内容不参与自己的历史 baseline；
 - 可比样本不足时不判 Winner、不写入 Experience；
+- 历史中位数为 0 时不伪造 Lift；
 - 探索轮次不读取历史 Experience；
 - 用户忽略检查项时保留 `ignored` 状态与时间；
 - 生产版本需增加认证、租户隔离、审计日志、速率限制和服务端输入验证。

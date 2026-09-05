@@ -299,7 +299,7 @@ svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width:
 .status-pill.winner { background: var(--success-soft); color: var(--success); }
 .status-pill.normal { background: var(--blue-soft); color: var(--blue); }
 .status-pill.review { background: var(--warning-soft); color: var(--warning); }
-.status-pill.waiting { background: #f1f3f6; color: var(--muted); }
+.status-pill.waiting, .status-pill.insufficient, .status-pill.zero-baseline { background: #f1f3f6; color: var(--muted); }
 .lift-up { color: var(--success); font-weight: 700; }
 .lift-down { color: var(--danger); font-weight: 700; }
 .mobile-performance-list { display: none; }

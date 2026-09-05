@@ -128,6 +128,8 @@ Campaign Brief
 
 Winner 不使用固定绝对阈值。当前 Prototype 对每条内容使用“同平台 + 相同 Goal”的**其他历史内容**作为对照集，明确排除当前内容本身，再计算历史中位数、Top 20% 位置和 Lift。可比历史少于 3 条时只展示“样本不足”，不会判定 Winner，也不会允许写入 Experience Memory。
 
+如果历史中位数为 0，则页面显示“基线不可计算”，不会把相对 Lift 伪装成 0%，也不会沉淀经验。直接通过 JSON / CSV 导入 Experience 时，必须使用该平台与 Goal 对应的核心指标、提供 `baseline_count >= 3`，并满足 `Lift >= 20%`，或同时提供不低于中位数的 `top20_value` 且当前指标达到该值。
+
 这套逻辑仍是作品集 Prototype 的相对比较启发式，而不是因果实验结论。它回答“这条内容相对可比历史表现是否突出”，不回答“某个内容元素是否导致了表现提升”。
 
 手动录入只展示对应平台可用指标，并额外展示当前 Goal 所需的核心指标（例如 Traffic 的 CTR、Conversion 的转化率）。CSV 可通过 `id` 匹配记录，或用 `title` + `platform` 匹配；指标列使用 Profile 中的英文键名，空白字段保持 `null`。
